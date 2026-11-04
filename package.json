@@ -27,5 +27,10 @@
     "eslint": "10.14.0",
     "markdownlint-cli2": "0.24.0",
     "yaml": "2.9.1"
+  },
+  "overrides": {
+    "katex": "^0.18.2",
+    "re2js": "^2.8.7",
+    "minimatch": "^11.0.1"
   }
 }

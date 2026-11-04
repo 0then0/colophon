@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-04
+
 ### Added
 
 - Clickable statistics: a click on a number (the cards, a month, the topics of a year, the bars of the detailed
@@ -60,5 +62,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Example vault with ten public domain books and neutral placeholder covers.
 - Checks for locales, generated files, the example vault and personal data, run in CI.
 
-[Unreleased]: https://github.com/0then0/colophon/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/0then0/colophon/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/0then0/colophon/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/0then0/colophon/releases/tag/v0.1.0

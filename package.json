@@ -1,6 +1,6 @@
 {
   "name": "colophon",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Book library and reading journal for Obsidian: Markdown, Properties, Bases and DataviewJS.",
   "private": true,
   "type": "module",

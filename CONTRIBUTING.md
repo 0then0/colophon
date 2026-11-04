@@ -23,7 +23,7 @@ Colophon has no runtime dependencies. The tools use Node and Python only for che
 ## Setting up
 
 You need Node 20 or newer and [uv](https://docs.astral.sh/uv/) for the Python tools. CI runs the Python tools on
-Python 3.11 to 3.16; 3.16 is a pre-release, so a failure there does not fail CI. The cover script needs Pillow, which
+Python 3.11 to 3.15. Python 3.16 is not tested yet: it is still a pre-release and Pillow has no wheel for it. The cover script needs Pillow, which
 `uv sync` installs.
 
 ```bash

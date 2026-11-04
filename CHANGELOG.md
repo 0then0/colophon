@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-04
+
 ### Added
 
 - Book page for Obsidian notes: cover, author and series panels, star rating in half steps, status selector, edit
@@ -18,3 +20,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `tools/compress-book-covers.py` for shrinking oversized JPEG covers with Pillow, no external programs needed (dry run by default).
 - Example vault with ten public domain books and neutral placeholder covers.
 - Checks for locales, generated files, the example vault and personal data, run in CI.
+
+[Unreleased]: https://github.com/0then0/colophon/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/0then0/colophon/releases/tag/v0.1.0

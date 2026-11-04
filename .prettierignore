@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.venv/
+example-vault/Books/
+example-vault/.obsidian/
+tools/build/sources/
+**/*.md
+**/*.json
+**/*.base
+**/*.yml
+**/*.jsonc

@@ -13,19 +13,24 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "node tools/build-localized.mjs",
-    "check:build": "node tools/build-localized.mjs --check",
-    "check:locales": "node tools/check-locales.mjs",
-    "check:vault": "node tools/check-vault.mjs",
-    "check:privacy": "node tools/check-privacy.mjs",
+    "build": "node tools/build/build-localized.mjs",
+    "check:build": "node tools/build/build-localized.mjs --check",
+    "check:locales": "node tools/check/check-locales.mjs",
+    "check:vault": "node tools/check/check-vault.mjs",
+    "check:privacy": "node tools/check/check-privacy.mjs",
     "lint:js": "eslint .",
     "lint:md": "markdownlint-cli2",
-    "check": "npm run lint:js && npm run lint:md && npm run check:locales && npm run check:build && npm run check:vault && npm run check:privacy"
+    "check": "npm run lint:js && npm run lint:md && npm run check:format && npm run check:locales && npm run check:build && npm run check:vault && npm run check:privacy && npm test",
+    "test": "node --test tools/test/*.test.mjs",
+    "build:release": "node tools/build/build-release.mjs",
+    "format": "prettier --write \"tools/**/*.mjs\" \"example-vault/Colophon/**/*.{js,css}\" eslint.config.mjs",
+    "check:format": "prettier --check \"tools/**/*.mjs\" \"example-vault/Colophon/**/*.{js,css}\" eslint.config.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "eslint": "10.14.0",
     "markdownlint-cli2": "0.24.0",
+    "prettier": "3.9.10",
     "yaml": "2.9.1"
   },
   "overrides": {

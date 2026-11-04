@@ -8,14 +8,22 @@ Thank you for helping. Bug reports, wording fixes and new languages are all welc
 ```text
 example-vault/
   Colophon/          the product: copy this folder into a vault
-    lib.js           shared code: settings, language, Intl formatting
+    lib.js           shared code: language, Intl formatting, vault helpers
+    model.js         pure settings logic (config.json, statuses, labels), also run by the tools and tests
     book/            book page (view.js, view.css)
     statistics/      statistics page
     locales/         one JSON file per language (en.json is the source)
     localized/       generated: Library, template and statistics note per language
     config.json      the settings block
   Books/, Templates/ demo content (generated files here are the English ones)
-tools/               checks, generators and the cover script (Node and Python, dev only)
+tools/               dev tooling, by purpose
+  user/              shipped to users, no dependencies: install.mjs, import-goodreads.mjs, compress-book-covers.py
+  check/             repository checks run by `npm run check`
+  build/             generators and the release builder (sources/ holds the Library and template sources)
+  dev/               helpers for development: synthetic libraries, demo covers
+  lib/               code shared by the Node tools (common.mjs, note-validation.mjs)
+  test/              Node tests (*.test.mjs)
+docs/                screenshots and INSTALL.md (shipped in the archive)
 ```
 
 Colophon has no runtime dependencies. The tools use Node and Python only for checks and generation.
@@ -38,29 +46,52 @@ npm run check
 uv run ruff check .
 uv run ruff format --check .
 uv run yamllint .github .yamllint.yml
-uv run python -m unittest discover -s tools -p "test_*.py"
+uv run python -m unittest discover -s tools/user -p "test_*.py"
 ```
 
-`npm run check` runs ESLint, markdownlint, the locale check, the generated-files check, the example vault check and
-the personal data scan. CI runs the same commands.
+`npm run check` runs ESLint, markdownlint, the Prettier format check (`npm run format` fixes it; JavaScript and CSS only), the locale check, the generated-files check, the example vault check, the
+personal data scan and the Node tests (`npm test`, files `tools/test/*.test.mjs`, Node's built-in runner). CI runs the same
+commands.
 
 The scripts also need to be tried in Obsidian, because no test can open a note for you. Open `example-vault` as a
 vault, install and enable Dataview with JavaScript queries turned on (see the README), and open a book note and
 `Books/Statistics`. For UI changes look at a narrow window (about 375 px wide), the light and the dark theme, and
 at least one language with long words (German) and one with a different script (Japanese).
 
+## Building the release archive
+
+```bash
+npm run build:release
+```
+
+This writes `dist/colophon-<version>.zip` and `dist/colophon-<version>.zip.sha256` (the version comes from
+`package.json`; `dist/` is git-ignored). The archive holds `install.mjs`, `INSTALL.md`, `LICENSE`, `CHANGELOG.md` and the
+`Colophon` folder, under one folder `colophon-<version>/`. It is reproducible: files are sorted, timestamps and
+permissions are fixed and nothing is compressed, so the same checkout gives the same bytes. Run `npm run check` first
+(it also builds the archive twice in a test and runs the installer from it), and make sure the generated files are up
+to date (`npm run build`). To release, bump the version in `package.json`, move the changelog entries to the new
+version, build, check the `.sha256` file and attach both files to the GitHub release. The build does not publish
+anything.
+
 ## Rules for the code
 
 - All interface text lives in `example-vault/Colophon/locales/*.json`. Do not put text in scripts. The locale check
   fails on unknown keys, unused keys and non-ASCII letters in code.
-- Property values (`status`, `format`, `category`) are stable English keys stored in notes. Only their labels are
-  translated.
+- Property values (`status`, `format`, `category`) are stable keys stored in notes. Only their labels are
+  translated. The lists of values come from `config.json` through `model.js`; do not write them into a script. Logic
+  follows the kind of a status (`kindOf`), never a status key.
+- `model.js` and `lib.js` are function bodies (top-level `return`), not modules. Anything that must be tested in Node
+  goes into `model.js`, which must not use Dataview, Obsidian or the DOM; the tests load it with `new Function`.
+- Problems in `config.json` are described by locale keys `config.error.<code>`. A new problem code needs a message in
+  every locale.
 - Use `Intl` for plurals, numbers, dates and lists. Do not build sentences from pieces, give translators whole
   messages with placeholders.
+- `tools/user/` must stay dependency-free: it may import only `node:` modules and files of its own folder (ESLint
+  enforces this), because it runs from the release archive without `npm install`.
 - Do not add runtime dependencies. Dev dependencies need a reason.
 - The files in `example-vault/Colophon/localized/`, `example-vault/Books/Library.base`,
   `example-vault/Templates/Book.md` and `example-vault/Books/Statistics.md` are generated. Change the source in
-  `tools/sources/` or the locale files, then run `npm run build`.
+  `tools/build/sources/` or the locale files, then run `npm run build`.
 
 ## Adding a language
 

@@ -1,6 +1,6 @@
 {
   "globs": ["**/*.md"],
-  "ignores": ["node_modules/**", "**/.obsidian/**", "example-vault/**", "tools/sources/**"],
+  "ignores": ["node_modules/**", "**/.obsidian/**", "example-vault/**", "tools/build/sources/**"],
   "config": {
     "default": true,
     "MD013": false,

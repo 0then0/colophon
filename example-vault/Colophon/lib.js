@@ -6,51 +6,35 @@
 //   root vault path of the folder that contains this file
 const app = dv.app;
 
-const DEFAULT_CONFIG = {
-  language: 'auto',
-  paths: { library: 'Books/Library', notes: 'Books/Notes', covers: 'Books/covers' },
-};
+// The pure part (settings, kinds, labels) lives in model.js so that the Node tools run the same code.
+const model = new Function(await app.vault.adapter.read(`${root}/model.js`))();
+const { HISTORY_HEADING, normalizeTag, toUtcDate, readingDays } = model;
 
-// Stable property values. They are stored in notes and never translated; only labels are.
-const STATUSES = ['planned', 'in_progress', 'finished', 'abandoned'];
-const FORMATS = ['audiobook', 'ebook', 'hardcover', 'paperback'];
-const TOPICS = [
-  'fantasy',
-  'science-fiction',
-  'classics',
-  'detective',
-  'philosophy',
-  'it',
-  'psychology',
-  'productivity',
-  'business',
-  'science',
-  'health',
-  'history',
-  'biography',
-];
-const CATEGORIES = ['fiction', 'non-fiction', ...TOPICS];
-const HISTORY_HEADING = '## Reading history';
-
-const trimSlashes = (s) => String(s).replace(/^\/+|\/+$/g, '');
+// The recommendation logic is only needed by the statistics page, so it is loaded on request.
+const loadRecommend = async () =>
+  new Function(await app.vault.adapter.read(`${root}/recommend.js`))();
 
 const readJson = async (path) => JSON.parse(await app.vault.adapter.read(path));
 
 // ---- Settings -----------------------------------------------------------------------------
 
+// Reads config.json. A broken file or a wrong value never stops the page: the affected part falls
+// back to its default and the problem is listed in config.problems (shown by showProblems).
 const loadConfig = async () => {
-  const user = await readJson(`${root}/config.json`);
-  const config = {
-    language: typeof user.language === 'string' ? user.language : DEFAULT_CONFIG.language,
-    paths: { ...DEFAULT_CONFIG.paths, ...(user.paths || {}) },
-  };
-  for (const key of Object.keys(config.paths)) config.paths[key] = trimSlashes(config.paths[key]);
+  let user;
+  const failures = [];
+  try {
+    user = await readJson(`${root}/config.json`);
+  } catch (error) {
+    const code = error instanceof SyntaxError ? 'invalidJson' : 'readFailed';
+    failures.push({ code, path: 'config.json', value: error.message });
+  }
+  const config = model.resolve(user);
+  if (failures.length) config.problems = failures;
   return config;
 };
 
 // ---- Language -----------------------------------------------------------------------------
-
-const normalizeTag = (tag) => String(tag).replace(/_/g, '-').toLowerCase();
 
 // Obsidian keeps its interface language in localStorage ("language"; empty means English).
 // moment follows the same setting and is the fallback.
@@ -81,7 +65,8 @@ const available = await listLocales();
 const requested = config.language === 'auto' ? obsidianLanguage() : config.language;
 const locale = pickLocale(requested, available);
 const english = await readJson(`${root}/locales/en.json`);
-const messages = locale === 'en' ? english : { ...english, ...(await readJson(`${root}/locales/${locale}.json`)) };
+const messages =
+  locale === 'en' ? english : { ...english, ...(await readJson(`${root}/locales/${locale}.json`)) };
 
 // ---- Formatting (everything goes through Intl) -------------------------------------------------
 
@@ -99,16 +84,6 @@ const listFormat = new Intl.ListFormat(locale, { type: 'conjunction', style: 'lo
 const number = (value, options) =>
   options ? new Intl.NumberFormat(locale, options).format(value) : numberFormat.format(value);
 
-// Accepts a Luxon DateTime (Dataview), a Date, or a "YYYY-MM-DD" string.
-const toUtcDate = (value) => {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value.year === 'number' && typeof value.month === 'number') {
-    return new Date(Date.UTC(value.year, value.month - 1, value.day));
-  }
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value));
-  return match ? new Date(Date.UTC(+match[1], +match[2] - 1, +match[3])) : null;
-};
 const date = (value) => {
   const d = toUtcDate(value);
   return d ? dateFormat.format(d) : value ? String(value) : '';
@@ -151,8 +126,24 @@ const t = (key, params = {}) => {
   });
 };
 
+// Statuses, formats and categories from config.json with their labels in the current language.
+const catalog = model.catalog(config, locale, (key) => messages[key]);
 // Label for a stable property value. Unknown values are shown as they are.
-const label = (group, value) => (messages[`${group}.${value}`] ? t(`${group}.${value}`) : String(value ?? ''));
+const label = catalog.label;
+
+// Problems found in config.json, as a callout at the top of a page.
+const showProblems = (container) => {
+  if (!config.problems.length) return;
+  const box = container.createDiv({ cls: 'callout', attr: { 'data-callout': 'warning' } });
+  box
+    .createDiv({ cls: 'callout-title' })
+    .createDiv({ cls: 'callout-title-inner', text: t('config.errorTitle') });
+  const items = box.createDiv({ cls: 'callout-content' }).createEl('ul');
+  for (const problem of config.problems) {
+    const { key, params } = model.problemMessage(problem);
+    items.createEl('li', { text: t(key, params) });
+  }
+};
 
 // ---- Vault helpers -------------------------------------------------------------------------
 
@@ -203,9 +194,15 @@ return {
   books,
   injectStyle,
   state: window.colophonState,
-  STATUSES,
-  FORMATS,
-  TOPICS,
-  CATEGORIES,
+  catalog,
+  statuses: catalog.statuses,
+  formats: catalog.formats,
+  categories: catalog.categories,
+  kindOf: catalog.kindOf,
+  keysOfKind: catalog.keysOfKind,
+  isTopic: catalog.isTopic,
+  showProblems,
+  readingDays,
+  loadRecommend,
   HISTORY_HEADING,
 };

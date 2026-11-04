@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [dependency-groups]
-# Needed only by tools/compress-book-covers.py.
+# Needed only by tools/user/compress-book-covers.py.
 covers = [
     "pillow>=13.0.0",
 ]

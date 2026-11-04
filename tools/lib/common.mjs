@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
-export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const VAULT = path.join(ROOT, 'example-vault');
 export const COLOPHON = path.join(VAULT, 'Colophon');
 export const LOCALES_DIR = path.join(COLOPHON, 'locales');
@@ -48,22 +48,42 @@ export const walk = (dir, skip = ['node_modules', '.git']) => {
   return out;
 };
 
-// Reads the top-level array constants (STATUSES, FORMATS, ...) from Colophon/lib.js, so the
-// stable property values are defined in exactly one place. Later constants may use earlier ones.
-export const libConstant = (name) => {
-  const source = read(path.join(COLOPHON, 'lib.js'));
-  const known = {};
-  for (const match of source.matchAll(/^const (\w+) = (\[[\s\S]*?\]);$/gm)) {
-    known[match[1]] = new Function(...Object.keys(known), `return ${match[2]};`)(...Object.values(known));
+// Colophon/model.js is a function body shared with lib.js; running it here gives the tools the
+// same settings logic that runs in Obsidian.
+export const loadModel = () => new Function(read(path.join(COLOPHON, 'model.js')))();
+export const model = loadModel();
+
+export const interpolate = (message, params) =>
+  message.replace(/\{(\w+)\}/g, (placeholder, name) =>
+    name in params ? String(params[name]) : placeholder,
+  );
+
+// Reads a config.json (a file path) into settings. `problems` are readable English sentences, taken
+// from the en locale, so a tool can print them.
+export const loadSettings = (file = path.join(COLOPHON, 'config.json')) => {
+  const messages = loadLocale('en');
+  let raw;
+  const problems = [];
+  try {
+    raw = parseStrictJson(read(file), rel(file));
+  } catch (error) {
+    problems.push(error.message);
   }
-  if (!(name in known)) throw new Error(`Constant ${name} not found in Colophon/lib.js`);
-  return known[name];
+  const settings = model.resolve(raw);
+  if (!problems.length) {
+    for (const problem of settings.problems) {
+      const { key, params } = model.problemMessage(problem);
+      problems.push(`${rel(file)}: ${interpolate(messages[key], params)}`);
+    }
+  }
+  return { settings, problems };
 };
 
 export const placeholders = (text) => new Set([...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 
 // Every string of a message (a plain string or the variants of a plural message).
-export const variants = (message) => (typeof message === 'string' ? [message] : Object.values(message));
+export const variants = (message) =>
+  typeof message === 'string' ? [message] : Object.values(message);
 
 export const report = (name, errors, warnings = []) => {
   for (const w of warnings) console.warn(`warning: ${w}`);

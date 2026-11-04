@@ -4,7 +4,7 @@
 The covers are abstract shapes drawn from scratch, with no text and no third-party artwork, so
 they can be published under the repository licence. Output is deterministic.
 
-    python3 tools/generate-demo-covers.py [output_dir]
+    python3 tools/dev/generate-demo-covers.py [output_dir]
 """
 
 from __future__ import annotations

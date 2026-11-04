@@ -1,52 +1,47 @@
-// Single source of the Library base. build-localized.mjs calls library(t) once per language,
-// where t(key) returns the label of that language. Values such as "planned" are stable keys and
-// are never translated; only names and labels are.
+// Single source of the Library base. build-localized.mjs calls library(t, catalog) once per
+// language, where t(key) returns the label of that language and catalog holds the statuses, formats
+// and categories of config.json with labels in that language (see Colophon/model.js). Values such
+// as "planned" are stable keys and are never translated; only names and labels are.
 
 const COLUMNS = ['formula.cover_image', 'formula.book', 'author'];
-const CATEGORY_VIEWS = [
-  ['fiction', true],
-  ['non-fiction', true],
-  ['philosophy', true],
-  ['it', true],
-  ['fantasy', false],
-  ['science-fiction', false],
-  ['classics', false],
-  ['detective', false],
-  ['psychology', false],
-  ['productivity', false],
-  ['business', false],
-  ['science', false],
-  ['health', false],
-  ['history', false],
-  ['biography', false],
-];
+// Categories that come first in the generated Library and show the format column. Other
+// categories, including your own, follow in the order of config.json.
+const FEATURED_CATEGORIES = ['fiction', 'non-fiction', 'philosophy', 'it'];
 
-// Expression strings are written in double quotes; the generator checks labels for quotes.
-const labelFormula = (property, group, keys, t) =>
-  keys.reduceRight((rest, key) => `if(${property} == "${key}", "${t(`${group}.${key}`)}", ${rest})`, `${property}`);
+// Expression strings are written in double quotes; labels are checked for quotes and backslashes.
+const labelFormula = (property, items) =>
+  items.reduceRight((rest, item) => `if(${property} == "${item.key}", "${item.label}", ${rest})`, `${property}`);
 
-export const library = (t) => {
-  const table = (nameKey, extra) => ({ type: 'table', name: t(nameKey), ...extra, rowHeight: 'tall' });
-  const categoryView = ([key, withFormat]) =>
-    table(`category.${key}`, {
+// Books whose status has the given kind. One status gives a plain filter, several give "or".
+const kindFilter = (catalog, kind) => {
+  const expressions = catalog.keysOfKind(kind).map((key) => `status == "${key}"`);
+  return expressions.length === 1 ? { and: expressions } : { or: expressions };
+};
+
+export const library = (t, catalog) => {
+  const table = (name, extra) => ({ type: 'table', name, ...extra, rowHeight: 'tall' });
+  const categoryView = ({ key, label }) =>
+    table(label, {
       filters: { and: [`category.contains("${key}")`] },
       order: [
         ...COLUMNS,
         'formula.status_label',
         'rating',
-        ...(withFormat ? ['formula.format_label'] : []),
+        ...(FEATURED_CATEGORIES.includes(key) ? ['formula.format_label'] : []),
         'finished',
       ],
       sort: [{ property: 'finished', direction: 'DESC' }],
     });
+  const featured = FEATURED_CATEGORIES.map((key) => catalog.categories.find((c) => c.key === key)).filter(Boolean);
+  const categories = [...featured, ...catalog.categories.filter((c) => !featured.includes(c))];
 
   return {
     filters: { and: ['type == "book"'] },
     formulas: {
       book: 'file.asLink(if(note.title, note.title, file.basename))',
       cover_image: 'if(note.cover, image(note.cover), "")',
-      status_label: labelFormula('note.status', 'status', ['planned', 'in_progress', 'finished', 'abandoned'], t),
-      format_label: labelFormula('note.format', 'format', ['audiobook', 'ebook', 'hardcover', 'paperback'], t),
+      status_label: labelFormula('note.status', catalog.statuses),
+      format_label: labelFormula('note.format', catalog.formats),
     },
     properties: {
       'formula.book': { displayName: t('base.prop.book') },
@@ -83,7 +78,7 @@ export const library = (t) => {
           'note.pages': 70,
         },
       },
-      table('base.view.queue', {
+      table(t('base.view.queue'), {
         filters: { and: ['queue >= 1'] },
         order: ['queue', ...COLUMNS.slice(0, 2), 'author', 'formula.format_label', 'pages'],
         sort: [{ property: 'queue', direction: 'ASC' }],
@@ -100,27 +95,27 @@ export const library = (t) => {
         imageAspectRatio: 1.5,
         cardSize: 190,
       },
-      table('base.view.reading', {
-        filters: { and: ['status == "in_progress"'] },
+      table(t('base.view.reading'), {
+        filters: kindFilter(catalog, 'in_progress'),
         order: [...COLUMNS, 'formula.format_label', 'started', 'pages'],
         sort: [{ property: 'started', direction: 'DESC' }],
       }),
-      table('base.view.planned', {
-        filters: { and: ['status == "planned"'] },
+      table(t('base.view.planned'), {
+        filters: kindFilter(catalog, 'planned'),
         order: [...COLUMNS, 'pages', 'date_added'],
         sort: [{ property: 'date_added', direction: 'DESC' }],
       }),
-      table('base.view.finished', {
-        filters: { and: ['status == "finished"'] },
+      table(t('base.view.finished'), {
+        filters: kindFilter(catalog, 'finished'),
         order: [...COLUMNS, 'rating', 'formula.format_label', 'started', 'finished', 'pages'],
         sort: [{ property: 'finished', direction: 'DESC' }],
       }),
-      table('base.view.abandoned', {
-        filters: { and: ['status == "abandoned"'] },
+      table(t('base.view.abandoned'), {
+        filters: kindFilter(catalog, 'abandoned'),
         order: [...COLUMNS, 'formula.format_label', 'started', 'pages'],
         sort: [{ property: 'started', direction: 'DESC' }],
       }),
-      table('base.view.topRated', {
+      table(t('base.view.topRated'), {
         filters: { and: ['rating >= 4.5'] },
         order: [...COLUMNS, 'rating', 'formula.format_label', 'finished'],
         sort: [
@@ -128,12 +123,17 @@ export const library = (t) => {
           { property: 'finished', direction: 'DESC' },
         ],
       }),
-      table('base.view.audiobooks', {
-        filters: { and: ['format == "audiobook"'] },
-        order: [...COLUMNS, 'formula.status_label', 'rating', 'started', 'finished'],
-        sort: [{ property: 'date_added', direction: 'DESC' }],
-      }),
-      ...CATEGORY_VIEWS.map(categoryView),
+      // The view needs the built-in "audiobook" format; without it there is nothing to filter.
+      ...(catalog.has('format', 'audiobook')
+        ? [
+            table(t('base.view.audiobooks'), {
+              filters: { and: ['format == "audiobook"'] },
+              order: [...COLUMNS, 'formula.status_label', 'rating', 'started', 'finished'],
+              sort: [{ property: 'date_added', direction: 'DESC' }],
+            }),
+          ]
+        : []),
+      ...categories.map(categoryView),
       {
         type: 'cards',
         name: t('base.view.cards'),

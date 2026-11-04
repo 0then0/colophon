@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Shrink oversized JPEG book covers.
 
-    uv run --group covers tools/compress-book-covers.py COVERS_DIR      # dry run, changes nothing
-    uv run --group covers tools/compress-book-covers.py COVERS_DIR --apply --originals BACKUP_DIR
+    uv run --group covers tools/user/compress-book-covers.py COVERS_DIR  # dry run, changes nothing
+    uv run --group covers tools/user/compress-book-covers.py COVERS_DIR --apply \
+        --originals BACKUP_DIR
 
 Without uv, install Pillow (`pip install pillow`) and run the script with Python directly.
 
@@ -30,7 +31,7 @@ try:
 except ImportError:  # pragma: no cover - depends on the environment
     sys.exit(
         "error: Pillow is not installed. Run the script with "
-        "`uv run --group covers tools/compress-book-covers.py ...` or `pip install pillow`."
+        "`uv run --group covers tools/user/compress-book-covers.py ...` or `pip install pillow`."
     )
 
 EXTENSIONS = {".jpg", ".jpeg"}

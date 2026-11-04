@@ -3,7 +3,7 @@ type: "{{date:[book]}}"
 title: "{{title}}"
 author:
 translator:
-status: planned
+status: {{config:defaultStatus}}
 format:
 category:
 series:

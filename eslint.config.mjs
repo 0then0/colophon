@@ -14,10 +14,13 @@ const wrap = (params) => ({
 });
 
 const browserGlobals = Object.fromEntries(
-  ['window', 'document', 'console', 'navigator', 'requestAnimationFrame'].map((n) => [n, 'readonly']),
+  ['window', 'document', 'console', 'navigator', 'requestAnimationFrame'].map((n) => [
+    n,
+    'readonly',
+  ]),
 );
 const nodeGlobals = Object.fromEntries(
-  ['process', 'console', 'URL'].map((n) => [n, 'readonly']),
+  ['process', 'console', 'URL', 'Buffer'].map((n) => [n, 'readonly']),
 );
 
 export default [
@@ -35,13 +38,35 @@ export default [
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: nodeGlobals },
   },
   {
+    // Shipped to users and run from the release archive without npm install: node: modules only.
+    files: ['tools/user/**/*.mjs'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(?!node:|\\./).*',
+              message: 'tools/user may import only node: modules and its own files',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['example-vault/Colophon/**/*.js'],
     languageOptions: { ecmaVersion: 2023, sourceType: 'script', globals: browserGlobals },
     processor: {
       meta: { name: 'colophon-body' },
       supportsAutofix: false,
       preprocess: (text, filename) =>
-        (filename.endsWith('lib.js') ? wrap('dv, root') : wrap('dv, input')).preprocess(text),
+        (filename.endsWith('model.js') || filename.endsWith('recommend.js')
+          ? wrap('')
+          : filename.endsWith('lib.js')
+            ? wrap('dv, root')
+            : wrap('dv, input')
+        ).preprocess(text),
       postprocess: (messages) => wrap('').postprocess(messages),
     },
   },

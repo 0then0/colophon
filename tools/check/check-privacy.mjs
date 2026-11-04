@@ -2,13 +2,14 @@
 // published: absolute home-folder paths, email addresses, and markers from private libraries.
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, read, rel, report, walk } from './common.mjs';
+import { ROOT, read, rel, report, walk } from '../lib/common.mjs';
 
 const SKIP_DIRS = ['node_modules', '.git', '.venv', '.obsidian', '.ruff_cache', '__pycache__'];
 const SKIP_FILES = new Set(['package-lock.json', 'check-privacy.mjs']);
 const BINARY = /\.(png|jpe?g|gif|webp|ico|woff2?|zip)$/i;
 
-const EMAIL_ALLOWED = /^(noreply@github\.com|[\w.+-]+@(users\.noreply\.github\.com|example\.(com|org|net)))$/i;
+const EMAIL_ALLOWED =
+  /^(noreply@github\.com|[\w.+-]+@(users\.noreply\.github\.com|example\.(com|org|net)))$/i;
 const rules = [
   { name: 'macOS home path', pattern: /\/Users\/(?!<|\.\.\.)[A-Za-z0-9._-]+/g },
   { name: 'Linux home path', pattern: /\/home\/(?!runner\b|<)[A-Za-z0-9._-]+/g },
@@ -19,7 +20,12 @@ const rules = [
 
 const errors = [];
 for (const file of walk(ROOT, SKIP_DIRS)) {
-  if (BINARY.test(file) || SKIP_FILES.has(path.basename(file)) || fs.statSync(file).size > 2_000_000) continue;
+  if (
+    BINARY.test(file) ||
+    SKIP_FILES.has(path.basename(file)) ||
+    fs.statSync(file).size > 2_000_000
+  )
+    continue;
   const text = read(file);
   for (const rule of rules) {
     for (const m of text.matchAll(rule.pattern)) errors.push(`${rel(file)}: ${rule.name}: ${m[0]}`);

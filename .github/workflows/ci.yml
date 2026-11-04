@@ -30,6 +30,8 @@ jobs:
         run: npm run lint:js
       - name: Lint Markdown
         run: npm run lint:md
+      - name: Check formatting
+        run: npm run check:format
       - name: Check locales
         run: npm run check:locales
       - name: Check generated files are up to date
@@ -38,6 +40,8 @@ jobs:
         run: npm run check:vault
       - name: Scan for personal data
         run: npm run check:privacy
+      - name: Unit tests
+        run: npm test
 
   python:
     name: Python ${{ matrix.python-version }}
@@ -63,4 +67,4 @@ jobs:
       - name: Lint YAML
         run: uv run yamllint .github .yamllint.yml
       - name: Test the cover compression script
-        run: uv run python -m unittest discover -s tools -p "test_*.py" -v
+        run: uv run python -m unittest discover -s tools/user -p "test_*.py" -v

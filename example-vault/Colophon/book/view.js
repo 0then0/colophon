@@ -14,12 +14,13 @@ const colophon = await new AsyncFunction('dv', 'root', await dv.app.vault.read(l
   libFile.parent.path,
 );
 const { app, t, label, number, date, state, paths } = colophon;
-const { list, coverFile, joinList, listParts, collator, HISTORY_HEADING } = colophon;
+const { list, coverFile, joinList, listParts, collator, HISTORY_HEADING, kindOf } = colophon;
 
 const page = dv.current();
 if (!page) return;
 
 await colophon.injectStyle('colophon-book-style', 'book/view.css');
+colophon.showProblems(dv.container);
 
 const title = page.title || page.file.name;
 const COVERS = paths.covers + '/';
@@ -81,7 +82,8 @@ const row = (name, value) => {
 };
 
 const rating = typeof page.rating === 'number' && page.rating > 0 ? page.rating : null;
-const ratingBox = rating !== null || page.status !== 'planned' ? row(t('meta.rating')) : null;
+const ratingBox =
+  rating !== null || kindOf(page.status) !== 'planned' ? row(t('meta.rating')) : null;
 const statusBox = page.status ? row(t('meta.status')) : null;
 const seriesName = page.series ? String(page.series) : null;
 const seriesBox = seriesName ? row(t('meta.series')) : null;
@@ -98,6 +100,23 @@ if (typeof page.pages === 'number') {
 if (page.publication_year) row(t('meta.year'), page.publication_year);
 if (page.started) row(t('meta.started'), date(page.started));
 if (page.finished) row(t('meta.finished'), date(page.finished));
+// Days of the current read, by the same rule as the statistics (colophon.readingDays).
+// Finished: started to finished; same-day reads are named, not shown as "0 days". In progress: started to today.
+// A missing or negative interval shows nothing. Earlier reads stay in the Reading history section.
+const spanText = (days) =>
+  days === 0 ? t('meta.sameDay') : t('meta.readingDays', { count: days });
+if (kindOf(page.status) === 'finished') {
+  const days = colophon.readingDays(page.started, page.finished);
+  if (days !== null && days >= 0) row(t('meta.readingTime'), spanText(days));
+} else if (kindOf(page.status) === 'in_progress') {
+  const days = colophon.readingDays(page.started, dv.date('today'));
+  if (days !== null && days >= 0) {
+    row(
+      t('meta.readingSoFar'),
+      days === 0 ? t('meta.startedToday') : t('meta.readingDays', { count: days }),
+    );
+  }
+}
 
 const links = info.createDiv({ cls: 'book-detail__links' });
 const edit = links.createEl('button', {
@@ -150,7 +169,7 @@ const showPanel = (id) => {
   isolate(panel);
   const head = panel.createDiv({ cls: 'book-detail__books-head' });
   if (isSeries) {
-    const done = books.filter((p) => p.status === 'finished').length;
+    const done = books.filter((p) => kindOf(p.status) === 'finished').length;
     head.appendText(t('panel.seriesHead', { name, count: books.length, done }));
     const note = dv
       .pages(`"${paths.notes}"`)
@@ -248,7 +267,7 @@ const today = () => dv.date('today').toFormat('yyyy-MM-dd');
 const saveFailed = (err) => t('error.saveFailed', { message: err.message });
 
 // Queue: what to read next. The position is stored in the "queue" property.
-if (page.status === 'planned') {
+if (kindOf(page.status) === 'planned') {
   const button = links.createEl('button', { cls: 'book-detail__edit', attr: { type: 'button' } });
   let place = typeof page.queue === 'number' ? page.queue : null;
   const paint = () => button.setText(place ? t('queue.remove', { place }) : t('queue.add'));
@@ -275,7 +294,7 @@ if (page.status === 'planned') {
 }
 
 // Read again: the finished read moves to the Reading history section, which statistics read.
-if (page.status === 'finished') {
+if (kindOf(page.status) === 'finished') {
   const button = links.createEl('button', {
     cls: 'book-detail__edit',
     text: t('reread.button'),
@@ -329,7 +348,7 @@ if (page.status === 'finished') {
           return lines.join('\n');
         });
         await setProps({
-          status: 'in_progress',
+          status: colophon.keysOfKind('in_progress')[0],
           started: today(),
           finished: null,
           reread_count: (Number(fm.reread_count) || 0) + 1,
@@ -354,7 +373,9 @@ if (ratingBox) {
   isolate(stars);
   const paint = (value) => {
     fill.style.width = `${(Math.max(0, Math.min(5, value || 0)) / 5) * 100}%`;
-    ratingLabel.setText(value === null ? t('rating.none') : t('rating.outOfFive', { rating: value }));
+    ratingLabel.setText(
+      value === null ? t('rating.none') : t('rating.outOfFive', { rating: value }),
+    );
     ratingLabel.toggleClass('book-detail__muted', value === null);
   };
   const valueAt = (e) => {
@@ -384,15 +405,17 @@ if (ratingBox) {
 
 // Status from a list. If the new status has no date yet, offer to set today's date.
 if (statusBox) {
+  // Which date a status asks for is decided by its kind, so custom statuses behave like built-in ones.
   const DATE_FOR = {
     in_progress: ['started', 'prompt.setStarted'],
     finished: ['finished', 'prompt.setFinished'],
   };
+  const dateFor = (status) => DATE_FOR[kindOf(status)];
   const select = statusBox.createEl('select', { cls: 'dropdown book-detail__status' });
-  for (const value of colophon.STATUSES) {
-    select.createEl('option', { value, text: label('status', value) });
+  for (const { key, label: text } of colophon.statuses) {
+    select.createEl('option', { value: key, text });
   }
-  if (!colophon.STATUSES.includes(page.status)) {
+  if (!colophon.statuses.some((s) => s.key === page.status)) {
     select.createEl('option', { value: page.status, text: page.status });
   }
   select.value = page.status;
@@ -402,7 +425,7 @@ if (statusBox) {
   const askDate = (status) => {
     prompt.empty();
     state.prompt = null;
-    const need = DATE_FOR[status];
+    const need = dateFor(status);
     if (!need || currentProps()[need[0]]) return;
     state.prompt = { path: page.file.path, status };
     prompt.createSpan({ text: t(need[1]) });
@@ -425,12 +448,12 @@ if (statusBox) {
       const before = currentProps();
       const changes = { status };
       // A queue position only makes sense for a planned book.
-      if (status !== 'planned' && before.queue != null) changes.queue = null;
+      if (kindOf(status) !== 'planned' && before.queue != null) changes.queue = null;
       await setProps(changes);
       // The metadata cache updates later, so the date is checked against the values from before the write.
       prompt.empty();
       state.prompt = null;
-      if (DATE_FOR[status] && !before[DATE_FOR[status][0]]) askDate(status);
+      if (dateFor(status) && !before[dateFor(status)[0]]) askDate(status);
     } catch (err) {
       select.value = previous;
       prompt.setText(saveFailed(err));
@@ -446,7 +469,7 @@ const coverText = (raw) => {
   const s = raw ? colophon.stripLink(raw) : '';
   return s.startsWith(COVERS) ? s.slice(COVERS.length) : s;
 };
-const options = (group, keys) => [['', t('form.unspecified')], ...keys.map((k) => [k, label(group, k)])];
+const options = (items) => [['', t('form.unspecified')], ...items.map((e) => [e.key, e.label])];
 const RATINGS = [
   ['', t('rating.none')],
   ...[5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5].map((r) => [String(r), number(r)]),
@@ -481,16 +504,22 @@ const FIELDS = [
     key: 'status',
     label: t('field.status'),
     type: 'select',
-    options: colophon.STATUSES.map((k) => [k, label('status', k)]),
+    options: colophon.statuses.map((e) => [e.key, e.label]),
   },
-  { key: 'rating', label: t('field.rating'), type: 'select', options: RATINGS, write: (s) => Number(s) },
-  { key: 'format', label: t('field.format'), type: 'select', options: options('format', colophon.FORMATS) },
+  {
+    key: 'rating',
+    label: t('field.rating'),
+    type: 'select',
+    options: RATINGS,
+    write: (s) => Number(s),
+  },
+  { key: 'format', label: t('field.format'), type: 'select', options: options(colophon.formats) },
   {
     key: 'category',
     label: t('field.category'),
     type: 'multi',
     wide: true,
-    options: colophon.CATEGORIES.map((k) => [k, label('category', k)]),
+    options: colophon.categories.map((e) => [e.key, e.label]),
     read: (v) => list(v).join(','),
     write: (s) => s.split(',').filter(Boolean),
   },
@@ -498,15 +527,16 @@ const FIELDS = [
     key: 'series',
     label: t('field.series'),
     type: 'text',
-    suggest: () => [
-      ...new Set(
-        dv
-          .pages()
-          .where((p) => p.type === 'book' && p.series)
-          .array()
-          .map((p) => String(p.series)),
-      ),
-    ].sort(collator.compare),
+    suggest: () =>
+      [
+        ...new Set(
+          dv
+            .pages()
+            .where((p) => p.type === 'book' && p.series)
+            .array()
+            .map((p) => String(p.series)),
+        ),
+      ].sort(collator.compare),
   },
   { key: 'series_index', label: t('field.seriesIndex'), type: 'number', write: (s) => Number(s) },
   { key: 'queue', label: t('field.queue'), type: 'number', write: (s) => Number(s) },

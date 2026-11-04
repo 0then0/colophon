@@ -2,7 +2,17 @@
 // placeholders, and that the code and the README agree with the locale files.
 import fs from 'node:fs';
 import path from 'node:path';
-import { COLOPHON, ROOT, loadLocales, placeholders, read, rel, report, variants, walk } from './common.mjs';
+import {
+  COLOPHON,
+  ROOT,
+  loadLocales,
+  placeholders,
+  read,
+  rel,
+  report,
+  variants,
+  walk,
+} from '../lib/common.mjs';
 
 const errors = [];
 const locales = loadLocales();
@@ -43,12 +53,15 @@ for (const [code, messages] of Object.entries(locales)) {
     const base = en[key];
     const where = `${code}: "${key}"`;
     if (typeof base !== typeof message) {
-      errors.push(`${where}: must be ${typeof base === 'string' ? 'a string' : 'a plural object'} like in en`);
+      errors.push(
+        `${where}: must be ${typeof base === 'string' ? 'a string' : 'a plural object'} like in en`,
+      );
       continue;
     }
     if (typeof message === 'object') {
       for (const form of Object.keys(message)) {
-        if (!allowedForms.has(form)) errors.push(`${where}: "${form}" is not a plural form of ${code}`);
+        if (!allowedForms.has(form))
+          errors.push(`${where}: "${form}" is not a plural form of ${code}`);
       }
       for (const form of needed) {
         if (!(form in message)) errors.push(`${where}: missing plural form "${form}"`);
@@ -59,7 +72,8 @@ for (const [code, messages] of Object.entries(locales)) {
         errors.push(`${where}: empty or non-string value`);
         continue;
       }
-      if (/[{}]/.test(text.replace(/\{\w+\}/g, ''))) errors.push(`${where}: stray brace in "${text}"`);
+      if (/[{}]/.test(text.replace(/\{\w+\}/g, '')))
+        errors.push(`${where}: stray brace in "${text}"`);
     }
     // Placeholders: every variant may use only placeholders of en, and together they use all of them.
     const expected = new Set(variants(base).flatMap((t) => [...placeholders(t)]));
@@ -70,7 +84,8 @@ for (const [code, messages] of Object.entries(locales)) {
         if (!expected.has(name)) errors.push(`${where}: unknown placeholder {${name}}`);
       }
     }
-    for (const name of expected) if (!used.has(name)) errors.push(`${where}: placeholder {${name}} is never used`);
+    for (const name of expected)
+      if (!used.has(name)) errors.push(`${where}: placeholder {${name}} is never used`);
     // Plural messages: {count} drives the form, so it must stay in at least one variant per form set.
     if (typeof message === 'object') {
       for (const [form, text] of Object.entries(message)) {
@@ -83,7 +98,8 @@ for (const [code, messages] of Object.entries(locales)) {
 
   // The Bases generator puts these labels inside expressions in double quotes.
   for (const key of keys.filter((k) => /^(status|format|category)\./.test(k))) {
-    if (/["\\]/.test(messages[key])) errors.push(`${code}: "${key}" must not contain quotes or backslashes`);
+    if (/["\\]/.test(messages[key]))
+      errors.push(`${code}: "${key}" must not contain quotes or backslashes`);
   }
 }
 
@@ -96,18 +112,21 @@ for (const file of files) {
   const source = read(file);
   for (const m of source.matchAll(literal)) {
     if (!namespaces.has(m[1].split('.')[0])) continue;
+    if (/\.(json|js|css)$/.test(m[1])) continue; // file names such as 'config.json'
     referenced.add(m[1]);
     if (!(m[1] in en)) errors.push(`${rel(file)}: uses unknown key "${m[1]}"`);
   }
   // Interface text belongs in locale files: no non-ASCII letters in code outside comments.
   const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const stray = code.match(/\p{L}/gu)?.filter((c) => c.charCodeAt(0) > 127);
-  if (stray?.length) errors.push(`${rel(file)}: non-ASCII letters in code (${[...new Set(stray)].join('')})`);
+  if (stray?.length)
+    errors.push(`${rel(file)}: non-ASCII letters in code (${[...new Set(stray)].join('')})`);
 }
 // Keys built from a group and a stable value, or used by the generator, are not literal in code.
-const dynamic = /^(status|format|category|base|template)\.|^language\.name$/;
+const dynamic = /^(status|format|category|base|template)\.|^config\.error\.|^language\.name$/;
 for (const key of enKeys) {
-  if (!referenced.has(key) && !dynamic.test(key)) errors.push(`en.json: key "${key}" is not used by any script`);
+  if (!referenced.has(key) && !dynamic.test(key))
+    errors.push(`en.json: key "${key}" is not used by any script`);
 }
 
 // README: the language badge must match the number of locale files.
@@ -116,10 +135,13 @@ if (fs.existsSync(readme)) {
   const count = Object.keys(locales).length;
   const badge = /img\.shields\.io\/badge\/languages-(\d+)-/.exec(read(readme));
   if (!badge) errors.push('README.md: languages badge not found');
-  else if (Number(badge[1]) !== count) errors.push(`README.md: languages badge says ${badge[1]}, there are ${count} locales`);
+  else if (Number(badge[1]) !== count)
+    errors.push(`README.md: languages badge says ${badge[1]}, there are ${count} locales`);
   for (const [code, messages] of Object.entries(locales)) {
     if (!read(readme).includes(messages['language.name'])) {
-      errors.push(`README.md: language list does not mention ${messages['language.name']} (${code})`);
+      errors.push(
+        `README.md: language list does not mention ${messages['language.name']} (${code})`,
+      );
     }
   }
 }

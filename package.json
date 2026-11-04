@@ -1,0 +1,31 @@
+{
+  "name": "colophon",
+  "version": "0.1.0",
+  "description": "Book library and reading journal for Obsidian: Markdown, Properties, Bases and DataviewJS.",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0then0/colophon.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node tools/build-localized.mjs",
+    "check:build": "node tools/build-localized.mjs --check",
+    "check:locales": "node tools/check-locales.mjs",
+    "check:vault": "node tools/check-vault.mjs",
+    "check:privacy": "node tools/check-privacy.mjs",
+    "lint:js": "eslint .",
+    "lint:md": "markdownlint-cli2",
+    "check": "npm run lint:js && npm run lint:md && npm run check:locales && npm run check:build && npm run check:vault && npm run check:privacy"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.14.0",
+    "markdownlint-cli2": "0.24.0",
+    "yaml": "2.9.1"
+  }
+}

@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Lint and checks (Node)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint JavaScript
+        run: npm run lint:js
+      - name: Lint Markdown
+        run: npm run lint:md
+      - name: Check locales
+        run: npm run check:locales
+      - name: Check generated files are up to date
+        run: npm run check:build
+      - name: Check the example vault (frontmatter, bases, scripts)
+        run: npm run check:vault
+      - name: Scan for personal data
+        run: npm run check:privacy
+
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # 3.16 is a pre-release: a failure there is reported but does not fail the run.
+    continue-on-error: ${{ matrix.python-version == '3.16' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15", "3.16"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Ruff lint
+        run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Lint YAML
+        run: uv run yamllint .github .yamllint.yml
+      - name: Test the cover compression script
+        run: uv run python -m unittest discover -s tools -p "test_*.py" -v

@@ -1,0 +1,8 @@
+{
+  "language": "auto",
+  "paths": {
+    "library": "Books/Library",
+    "notes": "Books/Notes",
+    "covers": "Books/covers"
+  }
+}

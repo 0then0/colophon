@@ -1,0 +1,20 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="128"
+  height="128"
+  viewBox="0 0 128 128"
+  role="img"
+  aria-labelledby="title desc"
+>
+  <title id="title">Colophon</title>
+  <desc id="desc">An open book with a bookmark ribbon.</desc>
+  <rect width="128" height="128" rx="28" fill="#1f5f5b" />
+  <path d="M20 38c18-6 34-4 44 5v55c-10-9-26-11-44-5z" fill="#f4efe3" />
+  <path d="M108 38c-18-6-34-4-44 5v55c10-9 26-11 44-5z" fill="#e6dfce" />
+  <g fill="none" stroke="#1f5f5b" stroke-opacity=".45" stroke-width="3" stroke-linecap="round">
+    <path d="M30 54c8-2 16-1 24 3" />
+    <path d="M30 66c8-2 16-1 24 3" />
+    <path d="M30 78c8-2 16-1 24 3" />
+  </g>
+  <path d="M78 41h16v36l-8-6-8 6z" fill="#e8a33d" />
+</svg>

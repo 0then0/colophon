@@ -1,0 +1,11 @@
+{
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**", "**/.obsidian/**", "example-vault/**", "tools/sources/**"],
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": { "siblings_only": true },
+    "MD033": { "allowed_elements": ["p", "h1", "a", "img", "picture", "source", "br", "details", "summary", "kbd"] },
+    "MD041": false
+  }
+}

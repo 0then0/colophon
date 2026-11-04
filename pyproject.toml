@@ -1,0 +1,27 @@
+[project]
+name = "colophon-tools"
+version = "0.1.0"
+description = "Development tooling for Colophon. Colophon itself has no runtime dependencies."
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+# Needed only by tools/compress-book-covers.py.
+covers = [
+    "pillow>=13.0.0",
+]
+dev = [
+    { include-group = "covers" },
+    "ruff==0.17.3",
+    "yamllint==1.38.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

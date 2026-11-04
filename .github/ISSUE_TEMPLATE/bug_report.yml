@@ -1,0 +1,63 @@
+name: Bug report
+description: Something does not work or looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Ideally on the example vault. Do not paste notes from a private library.
+    validations:
+      required: true
+  - type: input
+    id: obsidian
+    attributes:
+      label: Obsidian version
+      placeholder: "1.9.10"
+    validations:
+      required: true
+  - type: input
+    id: dataview
+    attributes:
+      label: Dataview plugin version
+      placeholder: "0.5.70"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [macOS, Windows, Linux, iOS, Android]
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Obsidian language and Colophon "language" setting
+      placeholder: "Obsidian: Deutsch, config.json: auto"
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Theme
+      options: [Default light, Default dark, Community theme (name it below), Not relevant]
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots and console output
+      description: >-
+        Screenshots help. Open the developer console (Ctrl/Cmd+Shift+I) for errors that mention
+        Colophon or the view scripts.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I checked that the text and screenshots contain no personal data
+          required: true

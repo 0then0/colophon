@@ -1,0 +1,38 @@
+name: Translation
+description: Add a language, fix a wording, or report a text that looks unnatural or cut off
+labels: [translation]
+body:
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: BCP 47 code and name.
+      placeholder: "it (Italiano)"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of change
+      options:
+        - New language
+        - Wording fix
+        - Text is cut off or breaks the layout
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: >-
+        Key names from the locale file (for example `form.save`), the current text, and your
+        suggestion. For layout problems add a screenshot and the window width.
+    validations:
+      required: true
+  - type: checkboxes
+    id: native
+    attributes:
+      label: About you
+      options:
+        - label: I am a native or fluent speaker of this language
+        - label: I would like to open a pull request for this myself

@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `import-storygraph.mjs` imports StoryGraph CSV exports locally with a preview, repeat import detection and dated
+  reading history.
+
 ## [0.2.0] - 2026-11-04
 
 ### Added

@@ -329,6 +329,43 @@ in it, so use it only on a copy.
 
 The report lists what was created, skipped, shelves and bindings that were not recognised, rereads and warnings.
 
+### Import from StoryGraph
+
+Export your library in StoryGraph under **Manage Account → Manage Your Data → Export StoryGraph Library**. Use Node 20
+or newer to run the importer from the release archive or from `tools/user/`. It reads the CSV locally.
+
+```bash
+# Preview which notes will be created or skipped
+node import-storygraph.mjs storygraph.csv --out "/path/to/vault/Books/Library"
+
+# Create the notes
+node import-storygraph.mjs storygraph.csv --out "/path/to/vault/Books/Library" --apply
+```
+
+Use your configured library folder for `--out`. Pass `--config <file>` with your vault's `Colophon/config.json` to use
+your own statuses and formats. `--language <code>` sets the note headings.
+
+Writing requires a filesystem that supports hard links. If the process is killed, remove the
+`.colophon-storygraph-import` folder in the library after confirming the import has stopped, then run the command again.
+
+- The CSV supplies the title, authors, format, date added and reading status. `read`, `currently-reading`, `to-read` and
+  `did-not-finish` use the first configured status of the corresponding kind. `paused` is treated as in progress.
+  Half-star ratings are imported as given. Ratings between those steps, such as 4.25, are listed in the report.
+- For a finished book, the latest confirmed reading supplies `started` and `finished`. Earlier completions go in
+  `Reading history`. For a book being reread, all confirmed completions go in the history and `finished` stays
+  empty. Each history line counts towards `reread_count`. A `?` marks an unknown start in the history.
+- An exact `Last Date Read` can supply a missing finish. The report lists omitted ambiguous dates, conflicting fields
+  and reads without dates. `Read Count` alone supplies no dates. A book marked read with no confirmed finish keeps its
+  status and has no dated entry in the statistics.
+- The importer recognises its own notes by `storygraph_id`, based on a valid ISBN or an ASIN from `ISBN/UID`.
+  ISBN-10 and ISBN-13 are kept distinct because StoryGraph can use them for separate editions. The exported ISBN goes
+  in `isbn` or `isbn13` and a non-ISBN value in `storygraph_uid`. For a blank or unrecognised ID, it stores a fingerprint
+  of all the CSV cells in `storygraph_row`. Repeating the same row skips it. Changes to those cells can create a new note
+  on a later import.
+- Rows with ambiguous matches are reported and skipped. Different editions stay separate. Matching uses the
+  import properties, so renamed notes still match and other notes with the same title or ISBN stay separate. The
+  importer leaves existing notes intact.
+
 Covers are ordinary image files that you provide; nothing downloads them for you. To shrink oversized JPEG covers:
 
 ```bash

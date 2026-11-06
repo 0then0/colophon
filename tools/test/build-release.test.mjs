@@ -66,6 +66,9 @@ test('the release archive is reproducible and holds the installer, its docs and 
     for (const name of [
       'install.mjs',
       'import-goodreads.mjs',
+      'import-storygraph.mjs',
+      'import-library.mjs',
+      'storygraph-readings.mjs',
       'INSTALL.md',
       'LICENSE',
       'CHANGELOG.md',
@@ -109,6 +112,13 @@ test('the release archive is reproducible and holds the installer, its docs and 
     assert.ok(fs.existsSync(path.join(vault, 'Colophon', 'lib.js')));
     assert.ok(fs.existsSync(path.join(vault, 'Books', 'Library.base')));
     assert.deepEqual(fs.readdirSync(path.join(vault, '.obsidian')), []);
+
+    for (const name of ['import-goodreads.mjs', 'import-storygraph.mjs']) {
+      const result = spawnSync(process.execPath, [path.join(a, 'x', top, name), '--help'], {
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, result.stderr);
+    }
   } finally {
     fs.rmSync(a, { recursive: true, force: true });
     fs.rmSync(b, { recursive: true, force: true });

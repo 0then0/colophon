@@ -2,7 +2,7 @@
 //
 //   node tools/build/build-release.mjs [--out <folder>]
 //
-// The archive holds the installer, the Goodreads importer, the documentation, the licence, the changelog and the Colophon
+// The archive holds the installer, the CSV importers, the documentation, the licence, the changelog and the Colophon
 // folder, all under one top-level folder colophon-<version>/. It is reproducible: files are sorted,
 // timestamps and permissions are fixed, nothing is compressed, so the same sources give the same
 // bytes on any machine. No dependencies; the zip format is written by hand.
@@ -30,12 +30,12 @@ const walk = (dir) =>
     return entry.isDirectory() ? walk(full) : [full];
   });
 
-add('install.mjs', fs.readFileSync(path.join(ROOT, 'tools', 'user', 'install.mjs')), 0o755);
-add(
-  'import-goodreads.mjs',
-  fs.readFileSync(path.join(ROOT, 'tools', 'user', 'import-goodreads.mjs')),
-  0o755,
-);
+for (const name of ['install.mjs', 'import-goodreads.mjs', 'import-storygraph.mjs']) {
+  add(name, fs.readFileSync(path.join(ROOT, 'tools', 'user', name)), 0o755);
+}
+for (const name of ['import-library.mjs', 'storygraph-readings.mjs']) {
+  add(name, fs.readFileSync(path.join(ROOT, 'tools', 'user', name)));
+}
 add('INSTALL.md', fs.readFileSync(path.join(ROOT, 'docs', 'INSTALL.md')));
 add('LICENSE', fs.readFileSync(path.join(ROOT, 'LICENSE')));
 add('CHANGELOG.md', fs.readFileSync(path.join(ROOT, 'CHANGELOG.md')));

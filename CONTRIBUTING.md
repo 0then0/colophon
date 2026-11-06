@@ -17,7 +17,7 @@ example-vault/
     config.json      the settings block
   Books/, Templates/ demo content (generated files here are the English ones)
 tools/               dev tooling, by purpose
-  user/              shipped to users, no dependencies: install.mjs, import-goodreads.mjs, compress-book-covers.py
+  user/              dependency-free installer, CSV importers and cover compressor
   check/             repository checks run by `npm run check`
   build/             generators and the release builder (sources/ holds the Library and template sources)
   dev/               helpers for development: synthetic libraries, demo covers

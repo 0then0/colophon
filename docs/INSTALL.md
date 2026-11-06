@@ -68,7 +68,8 @@ The installer does not touch your Obsidian settings, so these steps are yours:
    `Library.<code>.base` to `Books/Library.base`, `Statistics.<code>.md` to `Books/Statistics.md`.
 5. Enable the Templates plugin and set its template folder.
 
-Importing a Goodreads export: `import-goodreads.mjs` in this archive (see the README, "Adding and importing books").
+Use `import-goodreads.mjs` or `import-storygraph.mjs` from this archive to preview a CSV import. Add `--apply` to write
+notes to the folder specified by `--out` (see the README, "Adding and importing books").
 More about settings, your own statuses, formats and categories, and importing books is in the
 [README](https://github.com/0then0/colophon#readme).
 

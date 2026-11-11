@@ -13,7 +13,7 @@ example-vault/
     book/            book page (view.js, view.css)
     statistics/      statistics page
     locales/         one JSON file per language (en.json is the source)
-    localized/       generated: Library, template and statistics note per language
+    localized/       generated: Library, Summaries, templates and statistics note per language
     config.json      the settings block
   Books/, Templates/ demo content (generated files here are the English ones)
 tools/               dev tooling, by purpose
@@ -90,7 +90,8 @@ anything.
   enforces this), because it runs from the release archive without `npm install`.
 - Do not add runtime dependencies. Dev dependencies need a reason.
 - The files in `example-vault/Colophon/localized/`, `example-vault/Books/Library.base`,
-  `example-vault/Templates/Book.md` and `example-vault/Books/Statistics.md` are generated. Change the source in
+  `example-vault/Books/Summaries.base`, `example-vault/Templates/Book.md`, `example-vault/Templates/Summary.md` and
+  `example-vault/Books/Statistics.md` are generated. Change the source in
   `tools/build/sources/` or the locale files, then run `npm run build`.
 
 ## Adding a language

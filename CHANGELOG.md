@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Prequels: `series_index: 0` marks a prequel. The series panel, the book header and the Library Series view name it, the
+  edit form accepts 0, and a prequel does not hold back the main books of its series in the suggestions.
+- Summaries: notes with `type: summary` stay out of the library, the statistics and the suggestions. `Summaries.base` and
+  the `Summary` template are generated for every language (`--summaries` in the installer installs them).
+
+### Changed
+
+- The quote of the day is taken from notes with `type: book` only.
+
 ## [0.3.0] - 2026-11-07
 
 ### Added

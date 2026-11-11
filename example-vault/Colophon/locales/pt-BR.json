@@ -69,6 +69,7 @@
   "meta.startedToday": "Começou hoje",
   "edit.open": "Editar propriedades",
   "series.labelIndexed": "{series}, livro {index}",
+  "series.labelPrequel": "{series}, prequela",
 
   "panel.authorHead": { "one": "{name}: {count} livro", "other": "{name}: {count} livros" },
   "panel.seriesHead": {
@@ -77,6 +78,7 @@
   },
   "panel.seriesNote": "Nota da série",
   "panel.seriesItem": "{index}. {title}",
+  "panel.seriesPrequel": "Prequela. {title}",
   "panel.metaRated": "{status} · ★ {rating}",
 
   "queue.add": "Adicionar à fila",
@@ -109,6 +111,7 @@
   "field.category": "Categoria",
   "field.series": "Série",
   "field.seriesIndex": "Número na série",
+  "field.seriesIndexHint": "0 para uma prequela.",
   "field.queue": "Posição na fila",
   "field.pages": "Páginas",
   "field.year": "Ano de publicação",
@@ -120,6 +123,7 @@
   "validation.title": "Informe um título.",
   "validation.dates": "A data de término não pode ser anterior à data de início.",
   "validation.integers": "Os campos numéricos devem conter números inteiros positivos.",
+  "validation.seriesIndex": "O número na série deve ser um inteiro a partir de 0 (0 significa uma prequela).",
   "validation.cover": "Arquivo de capa não encontrado.",
 
   "stats.readingNow": "Lendo agora",
@@ -221,6 +225,8 @@
   "base.view.topRated": "Mais bem avaliados",
   "base.view.audiobooks": "Audiolivros",
   "base.view.cards": "Cartões",
+  "base.view.summaries": "Resumos",
+  "base.view.byTopic": "Por tema",
   "base.prop.book": "Livro",
   "base.prop.status": "Status",
   "base.prop.cover": "Capa",
@@ -233,6 +239,9 @@
   "base.prop.dateAdded": "Adicionado",
   "base.prop.series": "Série",
   "base.prop.seriesIndex": "Número",
+  "base.prop.seriesPrequel": "Prequela",
+  "base.prop.summary": "Resumo",
+  "base.prop.topics": "Temas",
   "base.prop.queue": "Fila",
 
   "template.notes": "Notas",

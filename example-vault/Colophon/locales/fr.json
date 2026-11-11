@@ -69,6 +69,7 @@
   "meta.startedToday": "Commencé aujourd’hui",
   "edit.open": "Modifier les propriétés",
   "series.labelIndexed": "{series}, tome {index}",
+  "series.labelPrequel": "{series}, préquelle",
 
   "panel.authorHead": { "one": "{name} : {count} livre", "other": "{name} : {count} livres" },
   "panel.seriesHead": {
@@ -77,6 +78,7 @@
   },
   "panel.seriesNote": "Note sur la série",
   "panel.seriesItem": "{index}. {title}",
+  "panel.seriesPrequel": "Préquelle. {title}",
   "panel.metaRated": "{status} · ★ {rating}",
 
   "queue.add": "Ajouter à la file",
@@ -109,6 +111,7 @@
   "field.category": "Catégorie",
   "field.series": "Série",
   "field.seriesIndex": "Numéro dans la série",
+  "field.seriesIndexHint": "0 pour une préquelle.",
   "field.queue": "Position dans la file",
   "field.pages": "Pages",
   "field.year": "Année de publication",
@@ -120,6 +123,7 @@
   "validation.title": "Saisissez un titre.",
   "validation.dates": "La date de fin ne peut pas précéder la date de début.",
   "validation.integers": "Les champs numériques doivent contenir des entiers positifs.",
+  "validation.seriesIndex": "Le numéro dans la série doit être un entier à partir de 0 (0 signifie une préquelle).",
   "validation.cover": "Fichier de couverture introuvable.",
 
   "stats.readingNow": "En cours de lecture",
@@ -221,6 +225,8 @@
   "base.view.topRated": "Mieux notés",
   "base.view.audiobooks": "Livres audio",
   "base.view.cards": "Cartes",
+  "base.view.summaries": "Résumés",
+  "base.view.byTopic": "Par thème",
   "base.prop.book": "Livre",
   "base.prop.status": "Statut",
   "base.prop.cover": "Couverture",
@@ -233,6 +239,9 @@
   "base.prop.dateAdded": "Ajouté",
   "base.prop.series": "Série",
   "base.prop.seriesIndex": "Numéro",
+  "base.prop.seriesPrequel": "Préquelle",
+  "base.prop.summary": "Résumé",
+  "base.prop.topics": "Thèmes",
   "base.prop.queue": "File",
 
   "template.notes": "Notes",

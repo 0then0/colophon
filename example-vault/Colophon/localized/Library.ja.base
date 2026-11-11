@@ -7,6 +7,7 @@ formulas:
   cover_image: if(note.cover, image(note.cover), "")
   status_label: if(note.status == "planned", "読みたい", if(note.status == "in_progress", "読書中", if(note.status == "finished", "読了", if(note.status == "abandoned", "中断", note.status))))
   format_label: if(note.format == "audiobook", "オーディオブック", if(note.format == "ebook", "電子書籍", if(note.format == "hardcover", "ハードカバー", if(note.format == "paperback", "ペーパーバック", note.format))))
+  series_number: if(note.series_index == 0, "前日譚", if(note.series_index, note.series_index.toString(), ""))
 properties:
   formula.book:
     displayName: 本
@@ -33,6 +34,8 @@ properties:
   note.series:
     displayName: シリーズ
   note.series_index:
+    displayName: 番号
+  formula.series_number:
     displayName: 番号
   note.queue:
     displayName: キュー
@@ -89,7 +92,7 @@ views:
       direction: ASC
     order:
       - formula.book
-      - series_index
+      - formula.series_number
       - formula.status_label
       - rating
     sort:

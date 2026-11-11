@@ -42,6 +42,8 @@ export const library = (t, catalog) => {
       cover_image: 'if(note.cover, image(note.cover), "")',
       status_label: labelFormula('note.status', catalog.statuses),
       format_label: labelFormula('note.format', catalog.formats),
+      // Number 0 in a series is a prequel and is shown by name.
+      series_number: `if(note.series_index == 0, "${t('base.prop.seriesPrequel')}", if(note.series_index, note.series_index.toString(), ""))`,
     },
     properties: {
       'formula.book': { displayName: t('base.prop.book') },
@@ -57,6 +59,7 @@ export const library = (t, catalog) => {
       'note.date_added': { displayName: t('base.prop.dateAdded') },
       'note.series': { displayName: t('base.prop.series') },
       'note.series_index': { displayName: t('base.prop.seriesIndex') },
+      'formula.series_number': { displayName: t('base.prop.seriesIndex') },
       'note.queue': { displayName: t('base.prop.queue') },
     },
     views: [
@@ -88,7 +91,7 @@ export const library = (t, catalog) => {
         name: t('base.view.series'),
         filters: { and: ['series != null'] },
         groupBy: { property: 'series', direction: 'ASC' },
-        order: ['formula.book', 'series_index', 'formula.status_label', 'rating'],
+        order: ['formula.book', 'formula.series_number', 'formula.status_label', 'rating'],
         sort: [{ property: 'series_index', direction: 'ASC' }],
         image: 'note.cover',
         imageFit: 'contain',

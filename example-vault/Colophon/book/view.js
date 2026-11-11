@@ -205,7 +205,10 @@ const showPanel = (id) => {
     const text = item.createDiv({ cls: 'book-detail__book-text' });
     const itemTitle =
       isSeries && typeof p.series_index === 'number'
-        ? t('panel.seriesItem', { index: p.series_index, title: nameOf(p) })
+        ? t(p.series_index === 0 ? 'panel.seriesPrequel' : 'panel.seriesItem', {
+            index: p.series_index,
+            title: nameOf(p),
+          })
         : nameOf(p);
     text.createDiv({ cls: 'book-detail__book-title', text: itemTitle });
     const status = label('status', p.status);
@@ -230,7 +233,10 @@ for (const [name, button] of authorButtons) panelButtons['author:' + name] = but
 if (seriesBox) {
   const text =
     typeof page.series_index === 'number'
-      ? t('series.labelIndexed', { series: seriesName, index: page.series_index })
+      ? t(page.series_index === 0 ? 'series.labelPrequel' : 'series.labelIndexed', {
+          series: seriesName,
+          index: page.series_index,
+        })
       : seriesName;
   panelButtons['series:' + seriesName] = seriesBox.createEl('button', {
     cls: 'book-detail__author-link',
@@ -538,7 +544,13 @@ const FIELDS = [
         ),
       ].sort(collator.compare),
   },
-  { key: 'series_index', label: t('field.seriesIndex'), type: 'number', write: (s) => Number(s) },
+  {
+    key: 'series_index',
+    label: t('field.seriesIndex'),
+    type: 'number',
+    hint: t('field.seriesIndexHint'),
+    write: (s) => Number(s),
+  },
   { key: 'queue', label: t('field.queue'), type: 'number', write: (s) => Number(s) },
   { key: 'pages', label: t('field.pages'), type: 'number', write: (s) => Number(s) },
   { key: 'publication_year', label: t('field.year'), type: 'number', write: (s) => Number(s) },
@@ -690,8 +702,12 @@ const showForm = (draft) => {
       return message.setText(t('validation.dates'));
     }
     for (const k of ['pages', 'publication_year', 'series_index', 'queue']) {
-      if (v(k) && !(Number.isInteger(Number(v(k))) && Number(v(k)) > 0)) {
-        return message.setText(t('validation.integers'));
+      // Number 0 in a series means a prequel.
+      const min = k === 'series_index' ? 0 : 1;
+      if (v(k) && !(Number.isInteger(Number(v(k))) && Number(v(k)) >= min)) {
+        return message.setText(
+          t(k === 'series_index' ? 'validation.seriesIndex' : 'validation.integers'),
+        );
       }
     }
     if (

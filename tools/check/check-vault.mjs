@@ -42,6 +42,8 @@ for (const file of files.filter((f) => f.endsWith('.js'))) {
 // ---- Markdown notes ------------------------------------------------------------------------------
 const notes = files.filter((f) => f.endsWith('.md'));
 let bookCount = 0;
+let summaryCount = 0;
+const asList = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
 for (const file of notes) {
   const text = read(file);
   const name = rel(file);
@@ -55,6 +57,14 @@ for (const file of notes) {
   for (const m of text.matchAll(/dv\.view\("([^"]+)"/g)) {
     if (!exists(`${m[1]}/view.js`))
       errors.push(`${name}: dv.view("${m[1]}") has no view.js in the vault`);
+  }
+  if (data?.type === 'summary') {
+    summaryCount++;
+    if (typeof data.title !== 'string' || !data.title)
+      errors.push(`${name}: summary needs a title`);
+    if (data.category != null && !asList(data.category).every((c) => catalog.has('category', c)))
+      errors.push(`${name}: summary has a category that is not a known key`);
+    continue;
   }
   if (!data || data.type !== 'book') continue;
   bookCount++;
@@ -72,11 +82,17 @@ if (bookCount === 0) errors.push('example-vault has no book notes');
 
 // ---- Templates -----------------------------------------------------------------------------------
 for (const file of notes.filter(
-  (f) => /Templates|localized/.test(f) && /Book(\.[\w-]+)?\.md$/.test(f),
+  (f) => /Templates|localized/.test(f) && /(Book|Summary)(\.[\w-]+)?\.md$/.test(f),
 )) {
   const data = frontmatterOf(read(file));
+  const isSummary = /Summary(\.[\w-]+)?\.md$/.test(file);
   if (!data) errors.push(`${rel(file)}: template has no frontmatter`);
-  else if (data.type === 'book')
+  else if (isSummary) {
+    if (data.type === 'summary')
+      errors.push(
+        `${rel(file)}: template must not have type "summary" or it would show up as a summary`,
+      );
+  } else if (data.type === 'book')
     errors.push(`${rel(file)}: template must not have type "book" or it would show up as a book`);
   else if (catalog.kindOf(data.status) !== 'planned')
     errors.push(
@@ -122,6 +138,6 @@ for (const file of files.filter((f) => f.endsWith('.base'))) {
 }
 
 report(
-  `vault (${bookCount} books, ${files.filter((f) => f.endsWith('.base')).length} bases)`,
+  `vault (${bookCount} books, ${summaryCount} summaries, ${files.filter((f) => f.endsWith('.base')).length} bases)`,
   errors,
 );

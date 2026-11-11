@@ -36,6 +36,8 @@ Options:
 
 - `--apply`: write the files. Without it the installer only prints the plan.
 - `--force`: overwrite files that exist and differ.
+- `--summaries`: also install `Templates/Summary.md` and `Summaries.base` (see [Summaries](https://github.com/0then0/colophon#summaries)). They are not
+  installed by default.
 - `--language <code>`: `en`, `ru`, `es`, `de`, `fr`, `ja` or `pt-BR`. Sets the interface language and the language of
   the template, base and statistics note. The default is `auto`: the interface follows Obsidian and the files are English.
 - `--library <folder>`, `--notes <folder>`, `--covers <folder>`: folders of book notes, series notes and cover images,

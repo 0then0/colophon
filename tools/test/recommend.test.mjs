@@ -97,6 +97,22 @@ test('series: continue a liked series; skip one with a dropped book; keep the or
   for (const hidden of [s3, d3, bad2]) assert.ok(!all.includes(hidden.id), hidden.title);
 });
 
+test('series: a prequel (number 0) does not hold back the main books', () => {
+  const prequel = book({ series: 'Saga', seriesIndex: 0 });
+  const first = read5({ series: 'Saga', seriesIndex: 1 });
+  const second = book({ series: 'Saga', seriesIndex: 2 });
+  const gated = book({ series: 'Other', seriesIndex: 2 });
+  const gate = book({ series: 'Other', seriesIndex: 1 });
+  const { seriesPicks, candidates } = rec.analyze(
+    [prequel, first, second, gated, gate],
+    TODAY,
+    isTopic,
+  );
+  // Both the unread prequel and number 2 are offered: the prequel is not an earlier unread book.
+  assert.deepEqual(seriesPicks.map((x) => x.book.id).sort(), [prequel.id, second.id].sort());
+  assert.ok(!ids(candidates).includes(gated.id), 'an unread number 1 still blocks number 2');
+});
+
 test('a link to a book you rated 4 or more, in either direction, is a reason', () => {
   const liked = read5({ title: 'Linked Read' });
   const weak = read5({ title: 'Weak', rating: 3 });

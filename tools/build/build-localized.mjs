@@ -12,8 +12,11 @@
 //   example-vault/Colophon/localized/Library.<code>.base
 //   example-vault/Colophon/localized/Book.<code>.md
 //   example-vault/Colophon/localized/Statistics.<code>.md
+//   example-vault/Colophon/localized/Summaries.<code>.base
+//   example-vault/Colophon/localized/Summary.<code>.md
 // and the English versions are also installed as the demo vault's working files:
-//   example-vault/Books/Library.base, example-vault/Templates/Book.md, example-vault/Books/Statistics.md
+//   example-vault/Books/Library.base, example-vault/Templates/Book.md, example-vault/Books/Statistics.md,
+//   example-vault/Books/Summaries.base, example-vault/Templates/Summary.md
 import fs from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
@@ -28,6 +31,7 @@ import {
   rel,
 } from '../lib/common.mjs';
 import { library } from './sources/library.mjs';
+import { summaries } from './sources/summaries.mjs';
 
 const args = process.argv.slice(2);
 const check = args.includes('--check');
@@ -91,16 +95,29 @@ for (const [code, messages] of Object.entries(locales)) {
   const baseText = BASE_HEADER(code) + YAML.stringify(base, { lineWidth: 0 });
   outputs.set(path.join(localizedDir, `Library.${code}.base`), baseText);
 
+  outputs.set(
+    path.join(localizedDir, `Summaries.${code}.base`),
+    BASE_HEADER(code).replace('library.mjs', 'summaries.mjs') +
+      YAML.stringify(summaries(t, catalog), { lineWidth: 0 }),
+  );
+
   const values = { defaultStatus: catalog.keysOfKind('planned')[0] };
   const book = render(read(path.join(ROOT, 'tools/build/sources/Book.md')), t, values);
   const statistics = render(read(path.join(ROOT, 'tools/build/sources/Statistics.md')), t, values);
   outputs.set(path.join(localizedDir, `Book.${code}.md`), book);
   outputs.set(path.join(localizedDir, `Statistics.${code}.md`), statistics);
+  const summary = render(read(path.join(ROOT, 'tools/build/sources/Summary.md')), t, values);
+  outputs.set(path.join(localizedDir, `Summary.${code}.md`), summary);
 
   if (code === 'en' && !outArg) {
     outputs.set(path.join(VAULT, 'Books', 'Library.base'), baseText);
     outputs.set(path.join(VAULT, 'Templates', 'Book.md'), book);
     outputs.set(path.join(VAULT, 'Books', 'Statistics.md'), statistics);
+    outputs.set(
+      path.join(VAULT, 'Books', 'Summaries.base'),
+      outputs.get(path.join(localizedDir, 'Summaries.en.base')),
+    );
+    outputs.set(path.join(VAULT, 'Templates', 'Summary.md'), summary);
   }
 }
 

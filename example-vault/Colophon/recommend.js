@@ -64,7 +64,11 @@ const analyze = (books, today, isTopic) => {
   const blockedInSeries = (b) =>
     (seriesBooks[b.series] || []).some(
       (o) =>
-        o !== b && (o.kind === 'planned' || o.kind === 'in_progress') && position(o) < position(b),
+        o !== b &&
+        (o.kind === 'planned' || o.kind === 'in_progress') &&
+        // A prequel (number 0) can be read at any time and does not hold back the main books.
+        o.seriesIndex !== 0 &&
+        position(o) < position(b),
     );
   const seriesRating = (b) => {
     const ratings = (seriesBooks[b.series] || [])

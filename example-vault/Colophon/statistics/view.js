@@ -215,6 +215,8 @@ if (queued.length > QUEUE_SHOWN) {
 const quoteFiles = app.vault
   .getMarkdownFiles()
   .filter((f) => f.path.startsWith(paths.library + '/'))
+  // Only book notes: summaries and other notes kept in the library folder are not quoted.
+  .filter((f) => app.metadataCache.getFileCache(f)?.frontmatter?.type === 'book')
   .filter((f) =>
     (app.metadataCache.getFileCache(f)?.sections || []).some((s) => s.type === 'blockquote'),
   )

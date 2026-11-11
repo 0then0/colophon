@@ -60,10 +60,13 @@ export const validateBookNote = ({ data, text, catalog, coversFolder, coverExist
   ) {
     fail('rating must be a number from 0.5 to 5 in steps of 0.5');
   }
-  for (const key of ['pages', 'publication_year', 'series_index', 'queue', 'reread_count']) {
+  for (const key of ['pages', 'publication_year', 'queue', 'reread_count']) {
     if (data[key] != null && !positiveInt(data[key]))
       fail(`${key} must be a positive whole number`);
   }
+  // Number 0 in a series is a prequel.
+  if (data.series_index != null && !(Number.isInteger(data.series_index) && data.series_index >= 0))
+    fail('series_index must be a whole number from 0 (0 is a prequel)');
   for (const key of ['started', 'finished', 'date_added', 'snoozed_until']) {
     if (data[key] != null && !isDate(data[key])) fail(`${key} must be a YYYY-MM-DD date`);
   }

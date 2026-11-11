@@ -69,6 +69,7 @@
   "meta.startedToday": "Empezado hoy",
   "edit.open": "Editar propiedades",
   "series.labelIndexed": "{series}, libro {index}",
+  "series.labelPrequel": "{series}, precuela",
 
   "panel.authorHead": { "one": "{name}: {count} libro", "other": "{name}: {count} libros" },
   "panel.seriesHead": {
@@ -77,6 +78,7 @@
   },
   "panel.seriesNote": "Nota de la serie",
   "panel.seriesItem": "{index}. {title}",
+  "panel.seriesPrequel": "Precuela. {title}",
   "panel.metaRated": "{status} · ★ {rating}",
 
   "queue.add": "Añadir a la cola",
@@ -109,6 +111,7 @@
   "field.category": "Categoría",
   "field.series": "Serie",
   "field.seriesIndex": "Número en la serie",
+  "field.seriesIndexHint": "0 para una precuela.",
   "field.queue": "Posición en la cola",
   "field.pages": "Páginas",
   "field.year": "Año de publicación",
@@ -120,6 +123,7 @@
   "validation.title": "Escribe un título.",
   "validation.dates": "La fecha de finalización no puede ser anterior a la de inicio.",
   "validation.integers": "Los campos numéricos deben ser números enteros positivos.",
+  "validation.seriesIndex": "El número en la serie debe ser un entero desde 0 (0 significa una precuela).",
   "validation.cover": "No se encontró el archivo de la portada.",
 
   "stats.readingNow": "Leyendo ahora",
@@ -221,6 +225,8 @@
   "base.view.topRated": "Mejor valorados",
   "base.view.audiobooks": "Audiolibros",
   "base.view.cards": "Tarjetas",
+  "base.view.summaries": "Resúmenes",
+  "base.view.byTopic": "Por tema",
   "base.prop.book": "Libro",
   "base.prop.status": "Estado",
   "base.prop.cover": "Portada",
@@ -233,6 +239,9 @@
   "base.prop.dateAdded": "Añadido",
   "base.prop.series": "Serie",
   "base.prop.seriesIndex": "Número",
+  "base.prop.seriesPrequel": "Precuela",
+  "base.prop.summary": "Resumen",
+  "base.prop.topics": "Temas",
   "base.prop.queue": "Cola",
 
   "template.notes": "Notas",

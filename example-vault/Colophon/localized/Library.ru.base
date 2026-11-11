@@ -7,6 +7,7 @@ formulas:
   cover_image: if(note.cover, image(note.cover), "")
   status_label: if(note.status == "planned", "Хочу прочитать", if(note.status == "in_progress", "Читаю", if(note.status == "finished", "Прочитано", if(note.status == "abandoned", "Брошено", note.status))))
   format_label: if(note.format == "audiobook", "Аудиокнига", if(note.format == "ebook", "Электронная книга", if(note.format == "hardcover", "Твёрдая обложка", if(note.format == "paperback", "Мягкая обложка", note.format))))
+  series_number: if(note.series_index == 0, "Приквел", if(note.series_index, note.series_index.toString(), ""))
 properties:
   formula.book:
     displayName: Книга
@@ -33,6 +34,8 @@ properties:
   note.series:
     displayName: Цикл
   note.series_index:
+    displayName: Номер
+  formula.series_number:
     displayName: Номер
   note.queue:
     displayName: Очередь
@@ -89,7 +92,7 @@ views:
       direction: ASC
     order:
       - formula.book
-      - series_index
+      - formula.series_number
       - formula.status_label
       - rating
     sort:

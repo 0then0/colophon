@@ -69,6 +69,7 @@
   "meta.startedToday": "Started today",
   "edit.open": "Edit properties",
   "series.labelIndexed": "{series}, book {index}",
+  "series.labelPrequel": "{series}, prequel",
 
   "panel.authorHead": { "one": "{name}: {count} book", "other": "{name}: {count} books" },
   "panel.seriesHead": {
@@ -77,6 +78,7 @@
   },
   "panel.seriesNote": "Series note",
   "panel.seriesItem": "{index}. {title}",
+  "panel.seriesPrequel": "Prequel. {title}",
   "panel.metaRated": "{status} · ★ {rating}",
 
   "queue.add": "Add to queue",
@@ -109,6 +111,7 @@
   "field.category": "Category",
   "field.series": "Series",
   "field.seriesIndex": "Number in series",
+  "field.seriesIndexHint": "0 for a prequel.",
   "field.queue": "Queue position",
   "field.pages": "Pages",
   "field.year": "Publication year",
@@ -120,6 +123,7 @@
   "validation.title": "Enter a title.",
   "validation.dates": "The finish date cannot be earlier than the start date.",
   "validation.integers": "Numeric fields must be positive whole numbers.",
+  "validation.seriesIndex": "Number in series must be a whole number from 0 (0 means a prequel).",
   "validation.cover": "Cover file not found.",
 
   "stats.readingNow": "Reading now",
@@ -221,6 +225,8 @@
   "base.view.topRated": "Top rated",
   "base.view.audiobooks": "Audiobooks",
   "base.view.cards": "Cards",
+  "base.view.summaries": "Summaries",
+  "base.view.byTopic": "By topic",
   "base.prop.book": "Book",
   "base.prop.status": "Status",
   "base.prop.cover": "Cover",
@@ -233,6 +239,9 @@
   "base.prop.dateAdded": "Added",
   "base.prop.series": "Series",
   "base.prop.seriesIndex": "Number",
+  "base.prop.seriesPrequel": "Prequel",
+  "base.prop.summary": "Summary",
+  "base.prop.topics": "Topics",
   "base.prop.queue": "Queue",
 
   "template.notes": "Notes",

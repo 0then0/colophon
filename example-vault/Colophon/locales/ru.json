@@ -74,6 +74,7 @@
   "meta.startedToday": "Начата сегодня",
   "edit.open": "Редактировать свойства",
   "series.labelIndexed": "{series}, книга {index}",
+  "series.labelPrequel": "{series}, приквел",
 
   "panel.authorHead": {
     "one": "{name}: {count} книга",
@@ -89,6 +90,7 @@
   },
   "panel.seriesNote": "Заметка о цикле",
   "panel.seriesItem": "{index}. {title}",
+  "panel.seriesPrequel": "Приквел. {title}",
   "panel.metaRated": "{status} · ★ {rating}",
 
   "queue.add": "Добавить в очередь",
@@ -121,6 +123,7 @@
   "field.category": "Категория",
   "field.series": "Цикл",
   "field.seriesIndex": "Номер в цикле",
+  "field.seriesIndexHint": "0 для приквела.",
   "field.queue": "Место в очереди",
   "field.pages": "Страницы",
   "field.year": "Год издания",
@@ -132,6 +135,7 @@
   "validation.title": "Укажите название.",
   "validation.dates": "Завершение не может быть раньше начала.",
   "validation.integers": "Числовые поля должны быть целыми и положительными.",
+  "validation.seriesIndex": "Номер в цикле должен быть целым числом от 0 (0 означает приквел).",
   "validation.cover": "Файл обложки не найден.",
 
   "stats.readingNow": "Читаю сейчас",
@@ -264,6 +268,8 @@
   "base.view.topRated": "Лучшие",
   "base.view.audiobooks": "Аудиокниги",
   "base.view.cards": "Карточки",
+  "base.view.summaries": "Саммари",
+  "base.view.byTopic": "По темам",
   "base.prop.book": "Книга",
   "base.prop.status": "Статус",
   "base.prop.cover": "Обложка",
@@ -276,6 +282,9 @@
   "base.prop.dateAdded": "Добавлена",
   "base.prop.series": "Цикл",
   "base.prop.seriesIndex": "Номер",
+  "base.prop.seriesPrequel": "Приквел",
+  "base.prop.summary": "Саммари",
+  "base.prop.topics": "Темы",
   "base.prop.queue": "Очередь",
 
   "template.notes": "Заметки",

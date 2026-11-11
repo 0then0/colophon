@@ -69,6 +69,7 @@
   "meta.startedToday": "Heute begonnen",
   "edit.open": "Eigenschaften bearbeiten",
   "series.labelIndexed": "{series}, Band {index}",
+  "series.labelPrequel": "{series}, Prequel",
 
   "panel.authorHead": { "one": "{name}: {count} Buch", "other": "{name}: {count} Bücher" },
   "panel.seriesHead": {
@@ -77,6 +78,7 @@
   },
   "panel.seriesNote": "Notiz zur Reihe",
   "panel.seriesItem": "{index}. {title}",
+  "panel.seriesPrequel": "Prequel. {title}",
   "panel.metaRated": "{status} · ★ {rating}",
 
   "queue.add": "Zur Warteschlange hinzufügen",
@@ -109,6 +111,7 @@
   "field.category": "Kategorie",
   "field.series": "Reihe",
   "field.seriesIndex": "Band in der Reihe",
+  "field.seriesIndexHint": "0 für ein Prequel.",
   "field.queue": "Platz in der Warteschlange",
   "field.pages": "Seiten",
   "field.year": "Erscheinungsjahr",
@@ -120,6 +123,7 @@
   "validation.title": "Bitte einen Titel eingeben.",
   "validation.dates": "Das Enddatum darf nicht vor dem Startdatum liegen.",
   "validation.integers": "Zahlenfelder müssen positive ganze Zahlen enthalten.",
+  "validation.seriesIndex": "Die Nummer in der Reihe muss eine ganze Zahl ab 0 sein (0 bedeutet ein Prequel).",
   "validation.cover": "Cover-Datei nicht gefunden.",
 
   "stats.readingNow": "Lese ich gerade",
@@ -221,6 +225,8 @@
   "base.view.topRated": "Bestbewertet",
   "base.view.audiobooks": "Hörbücher",
   "base.view.cards": "Karten",
+  "base.view.summaries": "Zusammenfassungen",
+  "base.view.byTopic": "Nach Thema",
   "base.prop.book": "Buch",
   "base.prop.status": "Status",
   "base.prop.cover": "Cover",
@@ -233,6 +239,9 @@
   "base.prop.dateAdded": "Hinzugefügt",
   "base.prop.series": "Reihe",
   "base.prop.seriesIndex": "Band",
+  "base.prop.seriesPrequel": "Prequel",
+  "base.prop.summary": "Zusammenfassung",
+  "base.prop.topics": "Themen",
   "base.prop.queue": "Warteschlange",
 
   "template.notes": "Notizen",

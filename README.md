@@ -54,6 +54,10 @@ here is English; every language and both themes were also checked at 1100 px and
   the property `snoozed_until`. Delete the property to bring the book back.
 - **Library base.** A Bases file with table and card views: all books, queue, series, reading, want to read, finished,
   abandoned, top rated, audiobooks and one view for each category.
+- **Prequels.** Number 0 in a series marks a prequel. It is named in the series panel and the Series view, it sorts
+  first, and it never holds back the main books in "Continue a series" and the suggestions.
+- **Summaries.** Notes with `type: summary` (see [Summaries](#summaries)) keep ideas from books you do not read in full
+  apart from the library and the statistics.
 - **Seven interface languages**, chosen from the Obsidian language or from a setting.
 - **A cover script** that shrinks oversized JPEG covers and keeps the originals.
 
@@ -211,7 +215,7 @@ category: # fiction, non-fiction, philosophy, it, fantasy, science-fiction, clas
   - philosophy # detective, psychology, productivity, business, science, health, history, biography, or your own
   - non-fiction
 series: Sherlock Holmes # optional; series_index orders the books of a series
-series_index: 1
+series_index: 1 # 0 is a prequel: it comes first and does not hold back the other books
 queue: 1 # optional; only for planned books, lower is read sooner
 snoozed_until: 2027-02-04 # optional; set by "Not now", the book is not suggested until that date
 rating: 4.5 # 0.5 to 5 in steps of 0.5; leave empty for no rating
@@ -255,6 +259,28 @@ function, `readingDays` in `Colophon/model.js`, whole days from `started` to `fi
 
 The template writes `type: "{{date:[book]}}"` on purpose. The Templates plugin turns it into `book` in the new note, but
 the template file itself does not match `type == "book"`, so it does not appear in your library.
+
+## Summaries
+
+Some notes are a summary of the ideas of a book you do not plan to read in full. They are not books, so keep them out of
+the library, the statistics and the suggestions: give them `type: summary` instead of `type: book`.
+
+```yaml
+---
+type: summary
+title: 'The Prince'
+author:
+  - Niccolò Machiavelli
+category:
+  - philosophy
+---
+```
+
+`Summaries.base` lists them in a table and grouped by topic (the categories that are topics, see
+[Settings](#settings)). Summaries can live in the library folder, because only notes with `type: book` are counted;
+a quote of the day is also taken from book notes only. The `Summary` template writes `type: "{{date:[summary]}}"` for the
+same reason as the book template. The installer adds the template and the base with `--summaries`; for a manual
+installation copy `Summary.<code>.md` and `Summaries.<code>.base` from `Colophon/localized/`.
 
 ## Adding and importing books
 

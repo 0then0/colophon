@@ -7,6 +7,7 @@ formulas:
   cover_image: if(note.cover, image(note.cover), "")
   status_label: if(note.status == "planned", "Möchte ich lesen", if(note.status == "in_progress", "Lese ich gerade", if(note.status == "finished", "Gelesen", if(note.status == "abandoned", "Abgebrochen", note.status))))
   format_label: if(note.format == "audiobook", "Hörbuch", if(note.format == "ebook", "E-Book", if(note.format == "hardcover", "Gebundene Ausgabe", if(note.format == "paperback", "Taschenbuch", note.format))))
+  series_number: if(note.series_index == 0, "Prequel", if(note.series_index, note.series_index.toString(), ""))
 properties:
   formula.book:
     displayName: Buch
@@ -33,6 +34,8 @@ properties:
   note.series:
     displayName: Reihe
   note.series_index:
+    displayName: Band
+  formula.series_number:
     displayName: Band
   note.queue:
     displayName: Warteschlange
@@ -89,7 +92,7 @@ views:
       direction: ASC
     order:
       - formula.book
-      - series_index
+      - formula.series_number
       - formula.status_label
       - rating
     sort:

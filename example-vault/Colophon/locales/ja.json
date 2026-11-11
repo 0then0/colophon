@@ -69,11 +69,13 @@
   "meta.startedToday": "今日から",
   "edit.open": "プロパティを編集",
   "series.labelIndexed": "{series}、{index}巻",
+  "series.labelPrequel": "{series}、前日譚",
 
   "panel.authorHead": { "other": "{name}：{count}冊" },
   "panel.seriesHead": { "other": "{name}：{count}冊、読了 {done}冊" },
   "panel.seriesNote": "シリーズのノート",
   "panel.seriesItem": "{index}. {title}",
+  "panel.seriesPrequel": "前日譚。{title}",
   "panel.metaRated": "{status} · ★ {rating}",
 
   "queue.add": "キューに追加",
@@ -106,6 +108,7 @@
   "field.category": "カテゴリ",
   "field.series": "シリーズ",
   "field.seriesIndex": "シリーズ内の番号",
+  "field.seriesIndexHint": "前日譚は0。",
   "field.queue": "キューの順位",
   "field.pages": "ページ数",
   "field.year": "出版年",
@@ -117,6 +120,7 @@
   "validation.title": "タイトルを入力してください。",
   "validation.dates": "終了日は開始日より前にできません。",
   "validation.integers": "数値の欄には正の整数を入力してください。",
+  "validation.seriesIndex": "シリーズ内の番号は0以上の整数にしてください（0は前日譚）。",
   "validation.cover": "表紙ファイルが見つかりません。",
 
   "stats.readingNow": "読書中",
@@ -209,6 +213,8 @@
   "base.view.topRated": "高評価",
   "base.view.audiobooks": "オーディオブック",
   "base.view.cards": "カード",
+  "base.view.summaries": "要約",
+  "base.view.byTopic": "テーマ別",
   "base.prop.book": "本",
   "base.prop.status": "ステータス",
   "base.prop.cover": "表紙",
@@ -221,6 +227,9 @@
   "base.prop.dateAdded": "追加日",
   "base.prop.series": "シリーズ",
   "base.prop.seriesIndex": "番号",
+  "base.prop.seriesPrequel": "前日譚",
+  "base.prop.summary": "要約",
+  "base.prop.topics": "テーマ",
   "base.prop.queue": "キュー",
 
   "template.notes": "メモ",

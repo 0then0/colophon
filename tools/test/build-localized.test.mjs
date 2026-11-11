@@ -57,6 +57,23 @@ test('--config generates a Library base from custom statuses, formats and catego
     // The English label is the fallback in a language without its own label.
     assert.match(fs.readFileSync(path.join(out, 'Library.de.base'), 'utf8'), /"On hold"/);
 
+    // A prequel (series number 0) is shown by name in the Series view.
+    assert.match(en.formulas.series_number, /if\(note\.series_index == 0, "Prequel"/);
+    assert.ok(en.views.find((v) => v.name === 'Series').order.includes('formula.series_number'));
+
+    // The Summaries base lists type "summary" notes by topic; fiction and non-fiction are not topics.
+    const summaries = YAML.parse(fs.readFileSync(path.join(out, 'Summaries.en.base'), 'utf8'));
+    assert.deepEqual(summaries.filters, { and: ['type == "summary"'] });
+    assert.match(summaries.formulas.topics, /value == "memoir"/);
+    assert.match(summaries.formulas.topics, /"Memoir"/);
+    assert.ok(!summaries.formulas.topics.includes('value == "fiction"'));
+    assert.deepEqual(
+      summaries.views.map((v) => v.name),
+      ['Summaries', 'By topic'],
+    );
+    const summaryTemplate = fs.readFileSync(path.join(out, 'Summary.en.md'), 'utf8');
+    assert.match(summaryTemplate, /^type: "\{\{date:\[summary\]\}\}"$/m);
+
     const template = fs.readFileSync(path.join(out, 'Book.en.md'), 'utf8');
     assert.match(template, /^status: planned$/m);
     assert.ok(fs.existsSync(path.join(out, 'Statistics.en.md')));

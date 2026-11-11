@@ -37,6 +37,8 @@ Options:
   --skip-template      do not install the book template
   --skip-base          do not install Library.base
   --skip-statistics    do not install the statistics note
+  --summaries          also install the Summary template and Summaries.base (notes of type "summary"
+                       for books you know only from a summary)
   --no-vault-check     install even if the folder has no .obsidian folder
   --help               show this text
 
@@ -57,6 +59,7 @@ const FLAGS = new Set([
   'skip-template',
   'skip-base',
   'skip-statistics',
+  'summaries',
   'no-vault-check',
 ]);
 const VALUES = new Set(['language', 'library', 'notes', 'covers', 'templates', 'source']);
@@ -218,6 +221,12 @@ if (!options['skip-base'])
   addFile(inBooks('Library.base'), localized(`Library.${filesLanguage}.base`), 'base');
 if (!options['skip-statistics'])
   addFile(inBooks('Statistics.md'), localized(`Statistics.${filesLanguage}.md`), 'statistics');
+if (options.summaries) {
+  if (!options['skip-template'])
+    addFile(`${templates}/Summary.md`, localized(`Summary.${filesLanguage}.md`), 'template');
+  if (!options['skip-base'])
+    addFile(inBooks('Summaries.base'), localized(`Summaries.${filesLanguage}.base`), 'base');
+}
 
 const inside = (target) => target === vault || target.startsWith(vault + path.sep);
 const lstat = (p) => {

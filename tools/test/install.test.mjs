@@ -219,6 +219,28 @@ test('a file named Colophon, or a link, blocks the install', () => {
   }
 });
 
+test('--summaries adds the Summary template and Summaries.base; without it they are not installed', () => {
+  const vault = makeVault(tmp());
+  try {
+    assert.equal(run(vault, '--apply', '--language', 'ru').status, 0);
+    assert.ok(!fs.existsSync(path.join(vault, 'Templates', 'Summary.md')));
+    assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Summaries.base')));
+    const result = run(vault, '--apply', '--language', 'ru', '--summaries');
+    assert.equal(result.status, 0, result.stderr);
+    const localized = (name) => fs.readFileSync(path.join(COLOPHON, 'localized', name));
+    assert.deepEqual(
+      fs.readFileSync(path.join(vault, 'Templates', 'Summary.md')),
+      localized('Summary.ru.md'),
+    );
+    assert.deepEqual(
+      fs.readFileSync(path.join(vault, 'Books', 'Summaries.base')),
+      localized('Summaries.ru.base'),
+    );
+  } finally {
+    cleanup(vault);
+  }
+});
+
 test('--skip-* leave the matching files out and the checklist follows', () => {
   const vault = makeVault(tmp());
   try {

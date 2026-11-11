@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-11
+
 ### Added
 
 - Prequels: `series_index: 0` marks a prequel. The series panel, the book header and the Library Series view name it, the
@@ -80,7 +82,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Example vault with ten public domain books and neutral placeholder covers.
 - Checks for locales, generated files, the example vault and personal data, run in CI.
 
-[Unreleased]: https://github.com/0then0/colophon/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/0then0/colophon/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/0then0/colophon/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/0then0/colophon/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/0then0/colophon/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/0then0/colophon/releases/tag/v0.1.0

@@ -815,5 +815,19 @@ if (rereads.length) {
   paragraph(t('stats.detail.rereadsNone'));
 }
 
+// The import page is installed next to the statistics note, in the parent folder of the library.
+const importPath = [...paths.library.split('/').slice(0, -1), 'Import.md'].join('/');
+if (app.vault.getAbstractFileByPath(importPath)) {
+  const importLink = dv.container
+    .createDiv({ cls: 'rb-import' })
+    .createEl('a', { cls: 'internal-link', text: t('import.link'), attr: { href: importPath } });
+  importLink.addEventListener('mousedown', (e) => e.stopPropagation());
+  importLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    app.workspace.openLinkText(importPath, '', e.metaKey || e.ctrlKey ? 'tab' : false);
+  });
+}
+
 // Redrawn by Dataview: open the list that was open before.
 if (state.drill) openDrill(state.drill);

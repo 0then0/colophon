@@ -154,6 +154,7 @@ const statistics = async (bookNotes) => {
         },
         read: (file) => readColophon(file.path),
         getMarkdownFiles: () => [],
+        getAbstractFileByPath: () => null,
       },
     },
     date: () => dvDate('2025-01-01'),

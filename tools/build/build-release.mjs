@@ -33,9 +33,7 @@ const walk = (dir) =>
 for (const name of ['install.mjs', 'import-goodreads.mjs', 'import-storygraph.mjs']) {
   add(name, fs.readFileSync(path.join(ROOT, 'tools', 'user', name)), 0o755);
 }
-for (const name of ['import-library.mjs', 'storygraph-readings.mjs']) {
-  add(name, fs.readFileSync(path.join(ROOT, 'tools', 'user', name)));
-}
+add('import-library.mjs', fs.readFileSync(path.join(ROOT, 'tools', 'user', 'import-library.mjs')));
 add('INSTALL.md', fs.readFileSync(path.join(ROOT, 'docs', 'INSTALL.md')));
 add('LICENSE', fs.readFileSync(path.join(ROOT, 'LICENSE')));
 add('CHANGELOG.md', fs.readFileSync(path.join(ROOT, 'CHANGELOG.md')));

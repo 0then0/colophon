@@ -14,13 +14,19 @@ const wrap = (params) => ({
 });
 
 const browserGlobals = Object.fromEntries(
-  ['window', 'document', 'console', 'navigator', 'requestAnimationFrame'].map((n) => [
-    n,
-    'readonly',
-  ]),
+  [
+    'window',
+    'document',
+    'console',
+    'navigator',
+    'requestAnimationFrame',
+    'setTimeout',
+    'TextEncoder',
+    'Notice',
+  ].map((n) => [n, 'readonly']),
 );
 const nodeGlobals = Object.fromEntries(
-  ['process', 'console', 'URL', 'Buffer'].map((n) => [n, 'readonly']),
+  ['process', 'console', 'URL', 'Buffer', 'setTimeout'].map((n) => [n, 'readonly']),
 );
 
 export default [
@@ -61,7 +67,7 @@ export default [
       meta: { name: 'colophon-body' },
       supportsAutofix: false,
       preprocess: (text, filename) =>
-        (filename.endsWith('model.js') || filename.endsWith('recommend.js')
+        (/(model|recommend|storygraph|engine)\.js$/.test(filename)
           ? wrap('')
           : filename.endsWith('lib.js')
             ? wrap('dv, root')

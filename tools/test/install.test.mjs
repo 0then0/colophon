@@ -99,6 +99,14 @@ test('--apply installs the product, config, template, base and statistics note',
       fs.readFileSync(path.join(vault, 'Books', 'Statistics.md')),
       localized('Statistics.de.md'),
     );
+    assert.deepEqual(
+      fs.readFileSync(path.join(vault, 'Books', 'Import.md')),
+      localized('Import.de.md'),
+    );
+    assert.match(result.stdout, /open Books\/Import\.md and choose the CSV file/);
+    for (const file of ['storygraph.js', 'import/view.js', 'import/engine.js', 'import/view.css']) {
+      assert.ok(fs.existsSync(path.join(vault, 'Colophon', file)), file);
+    }
     for (const dir of ['Books/Library', 'Books/Notes', 'Books/covers']) {
       assert.ok(fs.statSync(path.join(vault, dir)).isDirectory(), dir);
     }
@@ -244,13 +252,21 @@ test('--summaries adds the Summary template and Summaries.base; without it they 
 test('--skip-* leave the matching files out and the checklist follows', () => {
   const vault = makeVault(tmp());
   try {
-    const result = run(vault, '--apply', '--skip-template', '--skip-base', '--skip-statistics');
+    const result = run(
+      vault,
+      '--apply',
+      '--skip-template',
+      '--skip-base',
+      '--skip-statistics',
+      '--skip-import',
+    );
     assert.equal(result.status, 0, result.stderr);
     assert.ok(fs.existsSync(path.join(vault, 'Colophon', 'lib.js')));
     assert.ok(!fs.existsSync(path.join(vault, 'Templates')));
     assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Library.base')));
     assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Statistics.md')));
-    assert.doesNotMatch(result.stdout, /Templates"/);
+    assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Import.md')));
+    assert.doesNotMatch(result.stdout, /Templates"|Import\.md/);
   } finally {
     cleanup(vault);
   }

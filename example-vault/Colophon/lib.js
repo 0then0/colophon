@@ -14,6 +14,19 @@ const { HISTORY_HEADING, normalizeTag, toUtcDate, readingDays } = model;
 const loadRecommend = async () =>
   new Function(await app.vault.adapter.read(`${root}/recommend.js`))();
 
+// The StoryGraph import (shared with the command-line importer) is only needed by the import page.
+const loadImport = async () => {
+  const read = (file) => app.vault.adapter.read(`${root}/${file}`);
+  const core = new Function(await read('storygraph.js'))();
+  return new Function(await read('import/engine.js'))().create({
+    vault: app.vault,
+    model,
+    core,
+    root,
+    registry: window.colophonState,
+  });
+};
+
 const readJson = async (path) => JSON.parse(await app.vault.adapter.read(path));
 
 // ---- Settings -----------------------------------------------------------------------------
@@ -204,5 +217,6 @@ return {
   showProblems,
   readingDays,
   loadRecommend,
+  loadImport,
   HISTORY_HEADING,
 };

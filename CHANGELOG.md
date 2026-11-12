@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- StoryGraph import inside Obsidian: the new `Import` page (`dv.view("Colophon/import")`) reads a CSV chosen in the
+  file picker, shows a preview (new, already imported, ambiguous and unusable rows, planned note names, readings and
+  warnings) and creates the notes through the Vault API after you confirm. No Node, no file system path. The installer
+  places `Import.md` next to `Statistics.md` (`--skip-import` leaves it out) and the statistics page links to it.
+- Limits for a StoryGraph CSV, in the import page and in `import-storygraph.mjs`: 10 MB, 20,000 rows, 10,000 characters
+  in a field. A larger file is refused; a row with a longer field is skipped and reported.
+
+### Changed
+
+- The StoryGraph conversion, identities, plan and note text moved to `Colophon/storygraph.js`, which the command-line
+  importer and the import page both run. The command line, its report and the notes it writes are unchanged.
+  `storygraph-readings.mjs` is gone from the archive; the importers now need the `Colophon` folder next to them, as the
+  archive has it.
+
 ## [0.4.0] - 2026-11-11
 
 ### Added

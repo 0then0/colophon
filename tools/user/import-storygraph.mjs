@@ -1,24 +1,21 @@
 #!/usr/bin/env node
 // Local StoryGraph CSV import. Node 20 or newer, no npm dependencies.
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
   CsvError,
-  cleanDate,
-  cleanIsbn,
+  core,
   fail,
   loadHeadings,
   loadImportSettings,
   outputFolder,
   parseCsv,
-  planNames,
   renderNote,
+  takenNames,
   walkMarkdown,
+  withCsvMessages,
 } from './import-library.mjs';
-import { parseStoryGraphReadings } from './storygraph-readings.mjs';
 
 const USAGE = `Usage: node import-storygraph.mjs <export.csv> --out <folder> [options]
 
@@ -32,181 +29,63 @@ Options:
   --language <code>    language of the note headings (default: config language, or en)
   --help               show this text`;
 
-const STATUS_KINDS = new Map([
-  ['read', 'finished'],
-  ['currently-reading', 'in_progress'],
-  ['paused', 'in_progress'],
-  ['to-read', 'planned'],
-  ['did-not-finish', 'abandoned'],
-]);
-const FORMATS = new Map([
-  ['audio', 'audiobook'],
-  ['digital', 'ebook'],
-  ['hardcover', 'hardcover'],
-  ['paperback', 'paperback'],
-]);
-
-const validIsbn13 = (isbn) =>
-  /^97[89]/.test(isbn) &&
-  [...isbn].reduce((sum, digit, i) => sum + Number(digit) * (i % 2 ? 3 : 1), 0) % 10 === 0;
-
-const identifiers = (row) => {
-  const raw = row['ISBN/UID'].trim();
-  const isbn = cleanIsbn(raw);
-  if (isbn?.length === 10) {
-    const sum = [...isbn].reduce(
-      (total, digit, i) => total + (digit === 'X' ? 10 : Number(digit)) * (10 - i),
-      0,
-    );
-    // StoryGraph can use equivalent ISBN-10 and ISBN-13 values on different editions.
-    if (sum % 11 === 0) return { isbn, storygraph_id: isbn };
-  }
-  if (isbn?.length === 13 && validIsbn13(isbn)) return { isbn13: isbn, storygraph_id: isbn };
-  const uid = raw.toUpperCase();
-  if (/^B[A-Z0-9]{9}$/.test(uid)) return { storygraph_uid: uid, storygraph_id: uid };
-
-  // Use all exported cells, including fields we do not import. Two different rows without a
-  // reliable ID may represent different editions even when their title and authors match.
-  const cells = Object.keys(row)
-    .sort()
-    .map((key) => [key, row[key]]);
-  const hash = createHash('sha256').update(JSON.stringify(cells)).digest('hex').slice(0, 32);
-  return { ...(raw ? { storygraph_uid: raw } : {}), storygraph_row: hash };
+// The conversion, the identities and the plan are in Colophon/storygraph.js, shared with the import
+// page in Obsidian. It reports problems as codes; this is their English text.
+const quote = JSON.stringify;
+const WARNINGS = {
+  sessionStartOmitted: ({ session }) =>
+    `Dates Read ${quote(session)}: start without an unambiguous day omitted`,
+  sessionReversed: ({ session }) =>
+    `Dates Read ${quote(session)}: interval ends before it starts and was omitted`,
+  sessionOmitted: ({ session }) =>
+    `Dates Read ${quote(session)}: session without an unambiguous finish day omitted`,
+  lastDateOmitted: ({ value }) =>
+    `Last Date Read ${quote(value)}: no unambiguous finish day, omitted`,
+  abandonedUnconfirmed: () =>
+    'Dates Read intervals without a corresponding confirmed completion were omitted for the abandoned book',
+  lastDatePredates: ({ date }) =>
+    `Last Date Read (${date}) predates a Dates Read finish and was omitted`,
+  lastDateDisagrees: ({ date }) =>
+    `Last Date Read (${date}) disagrees with Dates Read and was omitted`,
+  readCountInvalid: ({ value }) => `Read Count ${quote(value)} is not a valid count`,
+  readCountMore: ({ count, dated }) =>
+    `Read Count is ${count}, but only ${dated} reading(s) have confirmed finish dates. Undated readings were omitted`,
+  readCountFewer: ({ count, dated }) =>
+    `Read Count is ${count}, but ${dated} dated readings were found. The dated readings were kept`,
+  sameDayFinishes: () =>
+    'Multiple readings ended on the same day. Colophon statistics count that day once',
+  noConfirmedFinish: () => 'Read status has no confirmed finish date',
+  noSingleStart: () =>
+    'Dates Read does not identify a single current start after the last completed reading',
+  pausedAsInProgress: () => 'Read Status paused imported as in progress',
+  idUnrecognised: () => 'unrecognised ISBN/UID; repeat imports match the exact CSV row',
+  idMissing: () => 'missing ISBN/UID; repeat imports match the exact CSV row',
+  ratingOmitted: ({ value }) =>
+    `Star Rating ${quote(value)} omitted; Colophon uses half-star steps`,
+  formatOmitted: ({ value }) => `Format ${quote(value)} omitted; no matching Colophon format`,
+  dateAddedOmitted: ({ value }) => `Date Added ${quote(value)} omitted; no exact date`,
 };
-
-const normalizeText = (value) => value.replace(/\s+/g, ' ').trim();
-
-const convert = (records, catalog) => {
-  const [headers, ...rows] = records;
-  if (!headers) throw new CsvError('the file is empty');
-  const keys = headers.map((header) => header.trim());
-  if (new Set(keys).size !== keys.length) throw new CsvError('duplicate column names');
-  const missing = ['Title', 'Authors', 'ISBN/UID', 'Read Status'].filter(
-    (key) => !keys.includes(key),
-  );
-  if (missing.length)
-    throw new CsvError(
-      `this does not look like a StoryGraph export: missing column(s) ${missing.join(', ')}`,
-    );
-
-  const books = [];
-  const skipped = [];
-  rows.forEach((cells, index) => {
-    const number = index + 2;
-    if (cells.length !== keys.length) {
-      skipped.push(`row ${number}: has ${cells.length} fields, the header has ${keys.length}`);
-      return;
-    }
-
-    const row = Object.fromEntries(keys.map((key, i) => [key, cells[i]]));
-    const title = normalizeText(row.Title);
-    const authors = [...new Set(row.Authors.split(',').map(normalizeText).filter(Boolean))];
-    if (!title || !authors.length) {
-      skipped.push(`row ${number}: missing ${title ? 'authors' : 'title'}`);
-      return;
-    }
-
-    const label = `row ${number} (${JSON.stringify(title)})`;
-    const readStatus = row['Read Status'].trim();
-    const kind = STATUS_KINDS.get(readStatus);
-    const status = catalog.keysOfKind(kind)[0];
-    if (!status) {
-      skipped.push(`${label}: no Colophon status for Read Status ${JSON.stringify(readStatus)}`);
-      return;
-    }
-
-    const { startedOn, finishedOn, history, warnings } = parseStoryGraphReadings(row, kind);
-    if (readStatus === 'paused') warnings.push('Read Status paused imported as in progress');
-    const ids = identifiers(row);
-    const { isbn, isbn13, ...provenance } = ids;
-    if (!ids.storygraph_id) {
-      const reason = ids.storygraph_uid ? 'unrecognised ISBN/UID' : 'missing ISBN/UID';
-      warnings.push(`${reason}; repeat imports match the exact CSV row`);
-    }
-    const book = {
-      id: ids.storygraph_id ?? `row-${ids.storygraph_row}`,
-      label,
-      title,
-      authors,
-      status,
-      started: startedOn,
-      finished: finishedOn,
-      history,
-      warnings,
-      isbn,
-      isbn13,
-      provenance,
-    };
-
-    const ratingText = row['Star Rating']?.trim();
-    if (ratingText) {
-      const rating = Number(ratingText);
-      if (/^\d+(?:\.[05]0*)?$/.test(ratingText) && rating > 0 && rating <= 5) {
-        book.rating = rating;
-      } else if (rating !== 0) {
-        warnings.push(
-          `Star Rating ${JSON.stringify(ratingText)} omitted; Colophon uses half-star steps`,
-        );
-      }
-    }
-    const formatText = row.Format?.trim();
-    if (formatText) {
-      const format = FORMATS.get(formatText.toLowerCase());
-      if (catalog.has('format', format)) book.format = format;
-      else
-        warnings.push(`Format ${JSON.stringify(formatText)} omitted; no matching Colophon format`);
-    }
-    const added = row['Date Added']?.trim();
-    if (added) {
-      book.dateAdded = cleanDate(added);
-      if (!book.dateAdded)
-        warnings.push(`Date Added ${JSON.stringify(added)} omitted; no exact date`);
-    }
-    books.push(book);
-  });
-  return { books, skipped, rows: rows.length };
+const SKIPS = {
+  fieldCount: ({ fields, expected }) => `has ${fields} fields, the header has ${expected}`,
+  fieldTooLong: ({ limit }) => `has a field longer than ${limit} characters`,
+  missingTitle: () => 'missing title',
+  missingAuthors: () => 'missing authors',
+  noStatus: ({ value }) => `no Colophon status for Read Status ${quote(value)}`,
+  ambiguousRows: () => 'ambiguous identity; multiple CSV rows share it',
+  ambiguousNotes: ({ count }) => `ambiguous identity; ${count} imported notes match`,
 };
-
-const addMatch = (index, key, value) => {
-  if (!index.has(key)) index.set(key, []);
-  index.get(key).push(value);
-};
+const label = ({ row, title }) =>
+  title === undefined ? `row ${row}` : `row ${row} (${quote(title)})`;
 
 const existingImports = (out) => {
   const found = new Map();
   for (const file of walkMarkdown(out)) {
-    const text = fs.readFileSync(file, 'utf8');
-    const front = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)?.[1];
-    if (!front) continue;
-    // The importer writes ASCII IDs as quoted YAML strings; also accept plain scalars
-    // and single quotes, including inline comments added by hand.
-    const id = /^storygraph_id:[ \t]*(["']?)([A-Z0-9]+)\1(?:[ \t]+#.*)?[ \t]*$/m.exec(front)?.[2];
-    const row = /^storygraph_row:[ \t]*(["']?)([a-f0-9]{32})\1(?:[ \t]+#.*)?[ \t]*$/m.exec(
-      front,
-    )?.[2];
-    if (id) addMatch(found, id, file);
-    if (row) addMatch(found, `row-${row}`, file);
+    for (const id of core.noteIdentities(fs.readFileSync(file, 'utf8'))) {
+      if (!found.has(id)) found.set(id, []);
+      found.get(id).push(file);
+    }
   }
   return found;
-};
-
-const plan = ({ books, skipped }, out) => {
-  const existing = existingImports(out);
-  const source = new Map();
-  for (const book of books) addMatch(source, book.id, book.label);
-
-  const fresh = [];
-  const known = [];
-  for (const book of books) {
-    const matches = existing.get(book.id) ?? [];
-    if (source.get(book.id).length > 1)
-      skipped.push(`${book.label}: ambiguous identity; multiple CSV rows share it`);
-    else if (matches.length > 1)
-      skipped.push(`${book.label}: ambiguous identity; ${matches.length} imported notes match`);
-    else if (matches.length === 1) known.push(book);
-    else fresh.push(book);
-  }
-  return { fresh, known, names: planNames(fresh, out) };
 };
 
 // Serialise apply runs to the same library before checking for existing imports and planning names.
@@ -231,7 +110,7 @@ const withImportLock = (out, run) => {
 
 const runImport = (input, file, out, headings, lock) => {
   const apply = Boolean(lock);
-  const { fresh, known, names } = plan(input, out);
+  const { fresh, known, skipped, names } = core.plan(input, existingImports(out), takenNames(out));
   console.log(`StoryGraph import${apply ? '' : ' (dry run: nothing is written)'}`);
   console.log(`  file:   ${file} (${input.rows} rows)`);
   console.log(`  folder: ${out}`);
@@ -244,10 +123,11 @@ const runImport = (input, file, out, headings, lock) => {
       book.history.length > 0 && `${book.history.length} earlier read(s)`,
     ].filter(Boolean);
     console.log(`  ${names.get(book.id)} (${details.join(', ')})`);
-    for (const warning of book.warnings) console.log(`warning: ${book.label}: ${warning}`);
+    for (const warning of book.warnings)
+      console.log(`warning: ${label(book)}: ${WARNINGS[warning.code](warning)}`);
   }
   console.log(`Skipped, already imported: ${known.length}`);
-  for (const reason of input.skipped) console.log(`Skipped: ${reason}`);
+  for (const row of skipped) console.log(`Skipped: ${label(row)}: ${SKIPS[row.code](row)}`);
   if (!apply) {
     console.log(fresh.length ? 'Dry run. Add --apply to write the notes.' : 'Nothing to write.');
     return;
@@ -296,11 +176,18 @@ const main = () => {
     return fail(`give one StoryGraph export file and --out <folder>\n\n${USAGE}`, 2);
 
   const [file] = positionals;
-  const context = loadImportSettings(options, path.dirname(fileURLToPath(import.meta.url)));
+  const context = loadImportSettings(options);
   const headings = loadHeadings(options, context);
   const out = outputFolder(options);
   try {
-    const input = convert(parseCsv(fs.readFileSync(file, 'utf8')), context.catalog);
+    // The limits are the ones of the import page (Colophon/storygraph.js).
+    const { LIMITS } = core;
+    if (fs.statSync(file).size > LIMITS.fileBytes)
+      withCsvMessages(() => {
+        throw new CsvError('tooLarge', { limit: LIMITS.fileBytes });
+      });
+    const records = parseCsv(fs.readFileSync(file, 'utf8'), { maxRecords: LIMITS.rows + 1 });
+    const input = withCsvMessages(() => core.convert(records, context.catalog));
     const run = (lock) => runImport(input, file, out, headings, lock);
     if (options.apply) withImportLock(out, run);
     else run();

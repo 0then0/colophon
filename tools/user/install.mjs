@@ -6,8 +6,8 @@
 //   node install.mjs <vault> [options] --apply  install
 //
 // It copies the Colophon folder into the vault, writes Colophon/config.json with the chosen language
-// and folders, and puts the book template, the Library base and the statistics note (in the chosen
-// language) where they belong. It never touches the vault's .obsidian folder.
+// and folders, and puts the book template, the Library base, the statistics note and the import page
+// (in the chosen language) where they belong. It never touches the vault's .obsidian folder.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,12 +37,13 @@ Options:
   --skip-template      do not install the book template
   --skip-base          do not install Library.base
   --skip-statistics    do not install the statistics note
+  --skip-import        do not install the import page (Import.md)
   --summaries          also install the Summary template and Summaries.base (notes of type "summary"
                        for books you know only from a summary)
   --no-vault-check     install even if the folder has no .obsidian folder
   --help               show this text
 
-Library.base and Statistics.md are placed in the parent folder of --library (Books by default).
+Library.base, Statistics.md and Import.md are placed in the parent folder of --library (Books by default).
 The installer never creates or changes .obsidian: enable the plugins yourself (see the list at the end).`;
 
 const fail = (message, code = 1) => {
@@ -59,6 +60,7 @@ const FLAGS = new Set([
   'skip-template',
   'skip-base',
   'skip-statistics',
+  'skip-import',
   'summaries',
   'no-vault-check',
 ]);
@@ -221,6 +223,8 @@ if (!options['skip-base'])
   addFile(inBooks('Library.base'), localized(`Library.${filesLanguage}.base`), 'base');
 if (!options['skip-statistics'])
   addFile(inBooks('Statistics.md'), localized(`Statistics.${filesLanguage}.md`), 'statistics');
+if (!options['skip-import'])
+  addFile(inBooks('Import.md'), localized(`Import.${filesLanguage}.md`), 'import');
 if (options.summaries) {
   if (!options['skip-template'])
     addFile(`${templates}/Summary.md`, localized(`Summary.${filesLanguage}.md`), 'template');
@@ -373,4 +377,9 @@ Next steps in Obsidian (the installer never changes .obsidian, so these are manu
       ? ''
       : `
   5. Open ${[options['skip-statistics'] ? null : inBooks('Statistics.md'), options['skip-base'] ? null : inBooks('Library.base')].filter(Boolean).join(' and ')}.`
+  }${
+    options['skip-import']
+      ? ''
+      : `
+  To import a StoryGraph export, open ${inBooks('Import.md')} and choose the CSV file.`
   }`);

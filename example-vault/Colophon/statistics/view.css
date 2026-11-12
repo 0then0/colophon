@@ -567,3 +567,8 @@
 .rb-rec-error {
   color: var(--text-error);
 }
+
+.rb-import {
+  margin: 18px 0 0;
+  font-size: 0.9em;
+}

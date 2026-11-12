@@ -58,6 +58,8 @@ here is English; every language and both themes were also checked at 1100 px and
   first, and it never holds back the main books in "Continue a series" and the suggestions.
 - **Summaries.** Notes with `type: summary` (see [Summaries](#summaries)) keep ideas from books you do not read in full
   apart from the library and the statistics.
+- **StoryGraph import inside Obsidian.** Choose the exported CSV on the Import page, check the preview and confirm.
+  The same import also runs from a terminal, and Goodreads exports are imported from a terminal.
 - **Seven interface languages**, chosen from the Obsidian language or from a setting.
 - **A cover script** that shrinks oversized JPEG covers and keeps the originals.
 
@@ -72,7 +74,8 @@ here is English; every language and both themes were also checked at 1100 px and
 - The core **Templates** plugin, if you want to create books from the template.
 
 Colophon has no runtime dependencies besides these. The scripts in `tools/` are for development only, except the
-installer and the importer (`tools/user/`), which needs Node 20+ and is part of the release archive. The cover script needs Python 3.11+ and Pillow
+installer and the command-line importers (`tools/user/`), which need Node 20+ and are part of the release archive. The
+StoryGraph import on the Import page needs no Node. The cover script needs Python 3.11+ and Pillow
 (installed by `uv`, see below).
 
 ## Install
@@ -91,7 +94,7 @@ node install.mjs "/path/to/your/vault" --apply --language en
 ```
 
 It copies the `Colophon` folder, writes `Colophon/config.json` with your language and folders, and installs the book
-template, `Library.base` and the statistics note in your language. It never overwrites a changed file without
+template, `Library.base`, the statistics note and the import page in your language. It never overwrites a changed file without
 `--force`, never deletes anything, is safe to run twice, and refuses a folder that is not a vault. Options and the
 manual steps it leaves to you (enabling Dataview with JavaScript queries, the Templates folder) are in
 [docs/INSTALL.md](docs/INSTALL.md), which is also inside the archive. Try it on a copy of your vault first.
@@ -110,6 +113,7 @@ The same thing by hand, if you do not have Node:
      `Templates`.
    - `Library.<code>.base` to `Books/Library.base`.
    - `Statistics.<code>.md` to `Books/Statistics.md`.
+   - `Import.<code>.md` to `Books/Import.md` (the statistics page links to it when it is next to `Statistics.md`).
 5. Create a book: make a new note in your library folder, then run **Templates: Insert template** and choose `Book`.
    Fill in the title and the author, and set the status. The book page appears at the top of the note.
 6. Open `Statistics`. Statistics are empty until a few books are finished.
@@ -357,8 +361,49 @@ The report lists what was created, skipped, shelves and bindings that were not r
 
 ### Import from StoryGraph
 
-Export your library in StoryGraph under **Manage Account → Manage Your Data → Export StoryGraph Library**. Use Node 20
-or newer to run the importer from the release archive or from `tools/user/`. It reads the CSV locally.
+Export your library in StoryGraph under **Manage Account → Manage Your Data → Export StoryGraph Library**. Import the
+CSV inside Obsidian or from a terminal. Both run the same code (`Colophon/storygraph.js`): the same file, settings and
+library give the same notes, and each recognises what the other imported.
+
+#### In Obsidian
+
+1. Open the `Import` note (installed next to `Statistics`; the statistics page links to it at the bottom). Any note
+   with a `dataviewjs` block that calls `await dv.view("Colophon/import")` works.
+2. Choose the CSV file. It is read on your device; nothing is uploaded and nothing is written yet.
+3. Check the preview: the file and the library folder from `Colophon/config.json`, how many rows are new, already
+   imported, ambiguous or unusable, and for every new note its file name, title, authors, status, rating, latest and
+   earlier reads and warnings. Long lists show the first 50 entries with the total; "Show more" opens the rest.
+4. Confirm. Notes are created one after another with a progress line and a button that stops after the current note.
+5. Read the result: what was created, skipped, in conflict, failed or not attempted. The page then shows a new preview
+   of what is left.
+
+What to expect:
+
+- **Limits**: a file of up to 10 MB, 20,000 rows and 10,000 characters in one field. A larger file is refused before it
+  is converted; a row with a longer field is skipped and listed. The command line applies the same limits.
+- **Existing notes are never changed.** A note is only created at a free path. If a file takes the planned name between
+  the preview and the creation, that book is reported as "not created" and gets another name on the next import.
+- **The plan is checked again when you confirm.** The file, `config.json` and the notes of the library are read again
+  (the notes themselves, not Obsidian's cache). If the result differs from the preview, nothing is created and the new
+  plan waits for a new confirmation. Problems in `config.json` block the import.
+- **Not all or nothing.** If the import fails or you stop it, the notes created so far stay. Nothing is deleted to undo
+  a run. Import again: existing notes are recognised by `storygraph_id` or `storygraph_row`, also after a rename, a move
+  inside the library or a restart of Obsidian. If a write was cut off, the result names the incomplete file; check or
+  delete it by hand.
+- **One import at a time per Obsidian window**, however many Import pages are open. Closing the page drops the
+  preview; an import that has started runs to its end and its result is shown when the page is opened again.
+- **Sync.** Colophon cannot see an import that runs on another device at the same moment. Import on one device and
+  let the sync finish before importing elsewhere, otherwise both devices can create the same book.
+- Headings of the created notes follow `language` in `config.json` (`auto` writes English headings, like the
+  installed template). Covers are not imported, and Goodreads exports are imported from the terminal only.
+
+The page uses only Obsidian's public Vault API and the standard file picker, so nothing in it is desktop-only. It was
+run on Obsidian 1.15.0 on macOS. On Obsidian Mobile the file picker, preview and import were not tried.
+
+#### From a terminal
+
+Use Node 20 or newer to run the importer from the release archive or from `tools/user/`. Keep it next to the `Colophon`
+folder (as in the archive): it loads the import logic from there. It reads the CSV locally.
 
 ```bash
 # Preview which notes will be created or skipped
@@ -373,6 +418,10 @@ your own statuses and formats. `--language <code>` sets the note headings.
 
 Writing requires a filesystem that supports hard links. If the process is killed, remove the
 `.colophon-storygraph-import` folder in the library after confirming the import has stopped, then run the command again.
+
+#### What is imported
+
+Both ways follow the same rules:
 
 - The CSV supplies the title, authors, format, date added and reading status. `read`, `currently-reading`, `to-read` and
   `did-not-finish` use the first configured status of the corresponding kind. `paused` is treated as in progress.

@@ -1,0 +1,226 @@
+/* Import page. All selectors are scoped to .ci. Colours come from the theme, so light and dark
+   themes need no rules of their own. */
+.ci {
+  container-type: inline-size;
+  color: var(--text-normal);
+}
+
+.ci-intro {
+  margin: 0 0 12px;
+}
+
+.ci-hint,
+.ci-status,
+.ci-more {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.ci-hint {
+  margin: 6px 0;
+}
+
+/* The file input stays in the tab order; the label is what is seen and clicked. */
+.ci-pick {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  min-height: 34px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.ci-pick:hover {
+  background: var(--interactive-hover);
+}
+
+.ci-pick:focus-within {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.ci-pick.is-disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ci-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.ci-panel {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 0 0 16px;
+}
+
+.ci-panel-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+
+.ci-panel p {
+  margin: 6px 0;
+}
+
+.ci-run progress {
+  display: block;
+  width: 100%;
+  margin: 8px 0 10px;
+}
+
+.ci-result details {
+  margin: 4px 0;
+}
+
+.ci-result summary {
+  cursor: pointer;
+}
+
+.ci-error,
+.ci-stale {
+  border-left: 3px solid var(--text-error);
+  padding: 6px 10px;
+  background: var(--background-secondary);
+  overflow-wrap: anywhere;
+}
+
+.ci-stale {
+  border-left-color: var(--text-warning, var(--text-accent));
+}
+
+.ci-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 14px;
+  margin: 14px 0;
+}
+
+.ci-facts dt {
+  color: var(--text-muted);
+}
+
+.ci-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ci-counts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.ci-count {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.ci-count b {
+  display: block;
+  font-size: 1.45em;
+  line-height: 1.2;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ci-count span {
+  display: block;
+  font-size: 0.8em;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.ci ul.ci-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.ci ul.ci-list > li {
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  overflow-wrap: anywhere;
+}
+
+.ci-result ul.ci-list > li {
+  padding: 3px 0;
+  border-bottom: 0;
+  font-size: 0.9em;
+}
+
+.ci-book-title,
+.ci-row {
+  font-weight: 600;
+}
+
+.ci-book-meta,
+.ci-book-file,
+.ci-book-read {
+  font-size: 0.88em;
+  color: var(--text-muted);
+}
+
+.ci ul.ci-warnings {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.88em;
+  color: var(--text-warning, var(--text-muted));
+}
+
+.ci-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 6px 0 12px;
+}
+
+.ci-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.ci button {
+  height: auto;
+  min-height: 30px;
+  white-space: normal;
+  text-align: left;
+}
+
+@container (max-width: 480px) {
+  .ci-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ci-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ci-facts dd {
+    margin-bottom: 6px;
+  }
+
+  .ci-actions button {
+    flex: 1 1 100%;
+  }
+}

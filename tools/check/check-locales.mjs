@@ -123,7 +123,8 @@ for (const file of files) {
     errors.push(`${rel(file)}: non-ASCII letters in code (${[...new Set(stray)].join('')})`);
 }
 // Keys built from a group and a stable value, or used by the generator, are not literal in code.
-const dynamic = /^(status|format|category|base|template)\.|^config\.error\.|^language\.name$/;
+const dynamic =
+  /^(status|format|category|base|template)\.|^config\.error\.|^import\.(warning|skip|error)\.|^language\.name$/;
 for (const key of enKeys) {
   if (!referenced.has(key) && !dynamic.test(key))
     errors.push(`en.json: key "${key}" is not used by any script`);

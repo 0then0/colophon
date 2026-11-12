@@ -25,8 +25,8 @@ Try it on a copy of the vault first if you have notes you care about.
 What the installer does:
 
 - copies the `Colophon` folder into the vault and writes `Colophon/config.json` with your language and folders;
-- installs the book template (`Templates/Book.md`), `Library.base` and `Statistics.md` in the chosen language. The last
-  two go to the parent folder of the library folder (`Books` by default);
+- installs the book template (`Templates/Book.md`), `Library.base`, `Statistics.md` and the import page `Import.md` in
+  the chosen language. The last three go to the parent folder of the library folder (`Books` by default);
 - creates the library, notes and covers folders if they are missing;
 - never overwrites a file that exists and differs. It lists the conflicts and stops without writing anything. `--force`
   overwrites only those files and never deletes anything. Running it twice is safe;
@@ -43,7 +43,7 @@ Options:
 - `--library <folder>`, `--notes <folder>`, `--covers <folder>`: folders of book notes, series notes and cover images,
   default `Books/Library`, `Books/Notes` and `Books/covers`.
 - `--templates <folder>`: folder for the book template, default `Templates`.
-- `--skip-template`, `--skip-base`, `--skip-statistics`: leave that file out.
+- `--skip-template`, `--skip-base`, `--skip-statistics`, `--skip-import`: leave that file out.
 - `--no-vault-check`: install into a folder that has no `.obsidian` folder yet.
 
 Folders are written relative to the vault root. The installer refuses folders outside the vault and hidden folders.
@@ -59,6 +59,7 @@ The installer does not touch your Obsidian settings, so these steps are yours:
 4. Create a note in your library folder, run **Templates: Insert template** and choose `Book`. Fill in the title and the
    author.
 5. Open `Statistics` and `Library.base` from the folder where they were installed.
+6. To bring in a StoryGraph library, open `Import`, choose the exported CSV file, check the preview and confirm.
 
 ## Manual installation
 
@@ -67,11 +68,14 @@ The installer does not touch your Obsidian settings, so these steps are yours:
    `dv.view("Colophon/book")`.
 3. Edit `Colophon/config.json` to set your folders and language.
 4. From `Colophon/localized/` copy the files in your language and rename them: `Book.<code>.md` to `Templates/Book.md`,
-   `Library.<code>.base` to `Books/Library.base`, `Statistics.<code>.md` to `Books/Statistics.md`.
+   `Library.<code>.base` to `Books/Library.base`, `Statistics.<code>.md` to `Books/Statistics.md`, `Import.<code>.md` to
+   `Books/Import.md`.
 5. Enable the Templates plugin and set its template folder.
 
-Use `import-goodreads.mjs` or `import-storygraph.mjs` from this archive to preview a CSV import. Add `--apply` to write
-notes to the folder specified by `--out` (see the README, "Adding and importing books").
+A StoryGraph export can be imported inside Obsidian on the `Import` page, without Node. From a terminal, use
+`import-goodreads.mjs` or `import-storygraph.mjs` from this archive to preview a CSV import and add `--apply` to write
+notes to the folder specified by `--out` (see the README, "Adding and importing books"). Keep the scripts next to the
+`Colophon` folder of the archive: they load the import logic from it.
 More about settings, your own statuses, formats and categories, and importing books is in the
 [README](https://github.com/0then0/colophon#readme).
 

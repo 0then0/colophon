@@ -1,5 +1,5 @@
 # --- Obsidian personal settings --------------------------------------------------------------
-# example-vault keeps only the minimum in .obsidian (see example-vault/README.md); everything
+# example-vault keeps only the minimum in .obsidian (see "Quick start" in README.md); everything
 # else, including plugin binaries and workspace state, stays local.
 .obsidian/
 !/example-vault/.obsidian/

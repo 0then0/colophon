@@ -36,7 +36,7 @@ Options:
 
 - `--apply`: write the files. Without it the installer only prints the plan.
 - `--force`: overwrite files that exist and differ.
-- `--summaries`: also install `Templates/Summary.md` and `Summaries.base` (see [Summaries](https://github.com/0then0/colophon#summaries)). They are not
+- `--summaries`: also install `Templates/Summary.md` and `Summaries.base` (see [Summaries](https://github.com/0then0/colophon/blob/main/docs/NOTES.md#summaries)). They are not
   installed by default.
 - `--language <code>`: `en`, `ru`, `es`, `de`, `fr`, `ja` or `pt-BR`. Sets the interface language and the language of
   the template, base and statistics note. The default is `auto`: the interface follows Obsidian and the files are English.
@@ -74,10 +74,28 @@ The installer does not touch your Obsidian settings, so these steps are yours:
 
 A StoryGraph export can be imported inside Obsidian on the `Import` page, without Node. From a terminal, use
 `import-goodreads.mjs` or `import-storygraph.mjs` from this archive to preview a CSV import and add `--apply` to write
-notes to the folder specified by `--out` (see the README, "Adding and importing books"). Keep the scripts next to the
-`Colophon` folder of the archive: they load the import logic from it.
-More about settings, your own statuses, formats and categories, and importing books is in the
-[README](https://github.com/0then0/colophon#readme).
+notes to the folder specified by `--out`. Keep the scripts next to the `Colophon` folder of the archive: they load the
+import logic from it.
+
+## Updating
+
+Unpack the new archive and run the installer again with the same options as before. New files are created. Files that
+differ from the new version are listed as conflicts and nothing is written until you add `--force`.
+
+`--force` also rewrites `Colophon/config.json` from the options on the command line. If you edited that file by hand,
+for example to add your own statuses, formats or categories, keep a copy and restore your additions after the update.
+Other files that you changed yourself (the template, `Library.base`) are overwritten in the same way; use the
+`--skip-*` options to leave them out. Your book notes are never touched.
+
+## More documentation
+
+The archive holds this file only. The rest is in the repository:
+
+- [Settings](https://github.com/0then0/colophon/blob/main/docs/SETTINGS.md): language, folders, your own statuses,
+  formats and categories.
+- [Book notes](https://github.com/0then0/colophon/blob/main/docs/NOTES.md): properties, reading history, summaries.
+- [Importing books](https://github.com/0then0/colophon/blob/main/docs/IMPORT.md): StoryGraph, Goodreads, covers.
+- [README](https://github.com/0then0/colophon#readme): overview, requirements, compatibility.
 
 ## Checking the download
 

@@ -25,7 +25,7 @@ tools/               dev tooling, by purpose
   dev/               helpers for development: synthetic libraries, demo covers
   lib/               code shared by the Node tools (common.mjs, note-validation.mjs)
   test/              Node tests (*.test.mjs)
-docs/                screenshots and INSTALL.md (shipped in the archive)
+docs/                user documentation (INSTALL.md is shipped in the archive) and screenshots
 ```
 
 Colophon has no runtime dependencies. The tools use Node and Python only for checks and generation.
@@ -67,8 +67,8 @@ npm run build:release
 ```
 
 This writes `dist/colophon-<version>.zip` and `dist/colophon-<version>.zip.sha256` (the version comes from
-`package.json`; `dist/` is git-ignored). The archive holds `install.mjs`, `INSTALL.md`, `LICENSE`, `CHANGELOG.md` and the
-`Colophon` folder, under one folder `colophon-<version>/`. It is reproducible: files are sorted, timestamps and
+`package.json`; `dist/` is git-ignored). The archive holds the installer, the CSV importers, `INSTALL.md`, `LICENSE`,
+`CHANGELOG.md` and the `Colophon` folder, under one folder `colophon-<version>/`. It is reproducible: files are sorted, timestamps and
 permissions are fixed and nothing is compressed, so the same checkout gives the same bytes. Run `npm run check` first
 (it also builds the archive twice in a test and runs the installer from it), and make sure the generated files are up
 to date (`npm run build`). To release, bump the version in `package.json`, move the changelog entries to the new

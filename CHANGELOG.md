@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-12
+
 ### Added
 
 - StoryGraph import inside Obsidian: the new `Import` page (`dv.view("Colophon/import")`) reads a CSV chosen in the
@@ -22,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   importer and the import page both run. The command line, its report and the notes it writes are unchanged.
   `storygraph-readings.mjs` is gone from the archive; the importers now need the `Colophon` folder next to them, as the
   archive has it.
+- The README is an overview with a quick start. Settings, the properties of a book note and importing are described in
+  `docs/SETTINGS.md`, `docs/NOTES.md` and `docs/IMPORT.md`; `docs/INSTALL.md` explains how to update an installation.
 
 ## [0.4.0] - 2026-11-11
 
@@ -98,7 +102,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Example vault with ten public domain books and neutral placeholder covers.
 - Checks for locales, generated files, the example vault and personal data, run in CI.
 
-[Unreleased]: https://github.com/0then0/colophon/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/0then0/colophon/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/0then0/colophon/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/0then0/colophon/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/0then0/colophon/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/0then0/colophon/compare/v0.1.0...v0.2.0

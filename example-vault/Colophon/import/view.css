@@ -21,6 +21,61 @@
   margin: 6px 0;
 }
 
+/* The service of the export: a group of radio buttons. */
+.ci-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.ci-sources legend {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.ci-source,
+.ci-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.ci-source input,
+.ci-check input {
+  flex: none;
+  margin: 0;
+}
+
+.ci-options {
+  margin-top: 12px;
+}
+
+.ci-options h4 {
+  margin: 14px 0 2px;
+  font-size: 1em;
+}
+
+.ci ul.ci-list > li.ci-shelf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 14em);
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 0;
+}
+
+.ci-shelf select {
+  width: 100%;
+  min-width: 0;
+}
+
 /* The file input stays in the tab order; the label is what is seen and clicked. */
 .ci-pick {
   display: inline-flex;
@@ -125,6 +180,10 @@
   margin: 0 0 14px;
 }
 
+.ci-counts.is-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .ci-count {
   background: var(--background-secondary);
   border-radius: 8px;
@@ -208,8 +267,13 @@
 }
 
 @container (max-width: 480px) {
-  .ci-counts {
+  .ci-counts,
+  .ci-counts.is-three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ci ul.ci-list > li.ci-shelf {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .ci-facts {

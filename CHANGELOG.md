@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Goodreads import inside Obsidian: the Import page asks whether the CSV comes from Goodreads or StoryGraph. For
+  Goodreads it lists the custom exclusive shelves and the other shelves of the file with a status or category picker,
+  and has two options, off by default, to add "My Review" and "Private Notes" to the notes. The preview shows the notes
+  to create, the books already imported with their notes, the skipped rows and the warnings of each book (for example
+  a Read Count above 1, which gives no dated history). Any change of the source, the file or a setting builds a new
+  preview that must be confirmed. The limits of the page (10 MB, 20,000 rows, 10,000 characters in a field that is
+  imported) apply; a file of the other service is named as such.
+
+### Changed
+
+- The Goodreads conversion moved to `Colophon/goodreads.js`, which `import-goodreads.mjs` and the Import page both
+  run, so the same file and settings give the same notes. The command line, its options, its report and the notes it
+  writes are unchanged; it now needs the `Colophon` folder next to it, like `import-storygraph.mjs`. It also recognises
+  a `goodreads_id` written with an inline comment or after a long block of properties.
+- The Import page lists the books that are already imported, with the note that has each of them, for StoryGraph too.
+
 ## [0.5.0] - 2026-11-12
 
 ### Added

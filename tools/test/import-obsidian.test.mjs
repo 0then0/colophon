@@ -1,5 +1,6 @@
-// The StoryGraph import as it runs inside Obsidian: Colophon/storygraph.js (shared with the command
-// line) and Colophon/import/engine.js against a stand-in vault. The stand-in exists for what a real
+// The StoryGraph and Goodreads imports as they run inside Obsidian: Colophon/storygraph.js and
+// Colophon/goodreads.js (shared with the command line) and Colophon/import/engine.js against a
+// stand-in vault. The stand-in exists for what a real
 // vault cannot be asked to do on demand: fail a write, change between two steps, lose a race.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -10,9 +11,16 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { COLOPHON, ROOT, loadLocale, loadSettings, model, read } from '../lib/common.mjs';
 import { frontmatterOf, historyCount, validateBookNote } from '../lib/note-validation.mjs';
+import {
+  HEADER as GR_HEADER,
+  ROWS as GR_ROWS,
+  row as grRow,
+  toCsv as grCsv,
+} from './goodreads-fixture.mjs';
 
 const script = path.join(ROOT, 'tools', 'user', 'import-storygraph.mjs');
 const core = new Function(read(path.join(COLOPHON, 'storygraph.js')))();
+const goodreads = new Function('core', read(path.join(COLOPHON, 'goodreads.js')))(core);
 const engineSource = read(path.join(COLOPHON, 'import', 'engine.js'));
 const LIBRARY = 'Books/Library';
 
@@ -152,7 +160,14 @@ const makeVault = (notes = {}, config = null) => {
 };
 
 const makeEngine = (vault, registry = {}) =>
-  new Function(engineSource)().create({ vault, model, core, root: 'Colophon', registry });
+  new Function(engineSource)().create({
+    vault,
+    model,
+    core,
+    goodreads,
+    root: 'Colophon',
+    registry,
+  });
 const source = (text, name = 'storygraph.csv') => ({
   name,
   size: Buffer.byteLength(text),
@@ -209,13 +224,18 @@ test('the fallback identity is the same SHA-256 as before, in any runtime', () =
 });
 
 test('every code of the shared logic has an interface message', () => {
-  for (const [group, codes] of Object.entries(core.CODES)) {
-    for (const code of codes) assert.ok(english[`import.${group}.${code}`], `${group}.${code}`);
-  }
-  const used = new Set(Object.entries(core.CODES).flatMap(([g, codes]) => codes.map((c) => g + c)));
+  // Goodreads warnings and skipped rows have their own messages under "goodreads.".
+  const codes = [
+    ...Object.entries(core.CODES).flatMap(([group, list]) => list.map((c) => `${group}.${c}`)),
+    ...Object.entries(goodreads.CODES).flatMap(([group, list]) =>
+      list.map((c) => `${group}.goodreads.${c}`),
+    ),
+    'error.notGoodreads',
+  ];
+  for (const code of codes) assert.ok(english[`import.${code}`], code);
   for (const key of Object.keys(english)) {
-    const [, group, code] = /^import\.(warning|skip)\.(.+)$/.exec(key) ?? [];
-    if (group) assert.ok(used.has(group + code), `${key} is not a code`);
+    const [, code] = /^import\.((?:warning|skip)\..+)$/.exec(key) ?? [];
+    if (code) assert.ok(codes.includes(code), `${key} is not a code`);
   }
 });
 
@@ -734,7 +754,7 @@ test('the limits of file size, rows and field length hold in both runtimes', asy
 });
 
 test('the import runtime uses no Node, Electron or file system API', () => {
-  for (const file of ['storygraph.js', 'import/engine.js', 'import/view.js']) {
+  for (const file of ['storygraph.js', 'goodreads.js', 'import/engine.js', 'import/view.js']) {
     const code = read(path.join(COLOPHON, file)).replace(/^\s*\/\/.*$/gm, '');
     assert.doesNotMatch(
       code,
@@ -742,4 +762,364 @@ test('the import runtime uses no Node, Electron or file system API', () => {
       file,
     );
   }
+});
+
+// ---- Goodreads --------------------------------------------------------------------------------
+
+const goodreadsScript = path.join(ROOT, 'tools', 'user', 'import-goodreads.mjs');
+const MAP = {
+  statuses: { dnf: 'abandoned' },
+  categories: { philosophy: 'philosophy', classics: 'classics' },
+};
+// Text that must stay text: HTML, Markdown and YAML in titles, authors and reviews, Unicode.
+const AWKWARD = [
+  grRow({
+    'Book Id': '3001',
+    Title: '<img src=x onerror="alert(1)"> & <b>Bold</b>',
+    Author: '---\ntype: summary',
+    'Additional Authors': '"Quoted, Writer", Émile Zola',
+    'Exclusive Shelf': 'read',
+    'Date Read': '2024/02/29',
+    'My Rating': '4.5',
+    ISBN13: '="978-0-14-303943-3"',
+    Bookshelves: 'classics, café 📚',
+    'My Review': '<p>First</p><p>Second &lt;script&gt;</p>\n# not a heading\n---\ntitle: forged',
+    'Private Notes': 'private <br/> line\n```dataviewjs\nawait dv.view("evil")\n```',
+  }),
+  grRow({
+    'Book Id': '3002',
+    Title: 'Mañana: «sí» — 東京 [[link]] #tag',
+    Author: 'Nobody',
+    'Exclusive Shelf': 'to-read',
+    'Date Added': '2024-13-01',
+    'Number of Pages': 'many',
+  }),
+];
+const goodreadsChoice = (options = {}) => ({
+  service: 'goodreads',
+  options: { reviews: false, privateNotes: false, statuses: {}, categories: {}, ...options },
+});
+const previewGoodreads = async (engine, text, options) => {
+  const session = engine.createSession();
+  await session.configure(goodreadsChoice(options));
+  await session.load(source(text, 'goodreads_library_export.csv'));
+  assert.equal(session.state, 'preview', JSON.stringify(session.error));
+  return session;
+};
+const GR_EXISTING = {
+  // The reader's own note: same title, no Goodreads id. It is never touched or matched.
+  [`${LIBRARY}/walden.md`]: '---\ntype: book\ntitle: Walden\nisbn: "0143039431"\n---\n\nMine.\n',
+  // A StoryGraph import of the same book: same ISBN, other service. Not a Goodreads import.
+  [`${LIBRARY}/From StoryGraph.md`]:
+    '---\ntype: book\ntitle: Dracula\nstorygraph_id: "1003"\nisbn13: "9780143039433"\n---\n',
+  // An earlier Goodreads import, renamed, moved and edited by hand.
+  [`${LIBRARY}/Read/My Moby.md`]: "---\ntype: book\ngoodreads_id: '1004' # mine\n---\n\nNotes.\n",
+};
+
+test('Goodreads: the import page and the command line write the same notes', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'colophon-goodreads-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const text = grCsv([...GR_ROWS, ...AWKWARD]);
+  const csv = path.join(dir, 'goodreads.csv');
+  fs.writeFileSync(csv, text);
+  fs.writeFileSync(path.join(dir, 'map.json'), JSON.stringify(MAP));
+  for (const [file, content] of Object.entries(GR_EXISTING)) {
+    fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+    fs.writeFileSync(path.join(dir, file), content);
+  }
+  const out = path.join(dir, LIBRARY);
+  const args = [csv, '--out', out, '--map', path.join(dir, 'map.json')];
+  const options = { ...MAP, reviews: true, privateNotes: true };
+  const dry = spawnSync(
+    process.execPath,
+    [goodreadsScript, ...args, '--reviews', '--private-notes'],
+    {
+      encoding: 'utf8',
+    },
+  );
+  assert.equal(dry.status, 0, dry.stderr);
+
+  const vault = makeVault(GR_EXISTING);
+  const engine = makeEngine(vault);
+  const session = await previewGoodreads(engine, text, options);
+  const { plan } = session;
+  assert.deepEqual(vault.creates, []);
+  assert.equal(Number(/To create: (\d+)/.exec(dry.stdout)[1]), plan.fresh.length);
+  assert.equal(Number(/already imported: (\d+)/.exec(dry.stdout)[1]), plan.known.length);
+  assert.deepEqual(
+    plan.known.map((book) => book.id),
+    ['1004'],
+  );
+  // The shelves of the file, for the settings: custom exclusive shelves and the others.
+  assert.deepEqual([...plan.shelves.exclusive], [['dnf', 1]]);
+  assert.deepEqual([...plan.shelves.other].sort(), [
+    ['café 📚', 1],
+    ['classics', 3],
+    ['favorites', 1],
+    ['horror', 1],
+    ['philosophy', 1],
+  ]);
+
+  const cli = spawnSync(
+    process.execPath,
+    [goodreadsScript, ...args, '--reviews', '--private-notes', '--apply'],
+    { encoding: 'utf8' },
+  );
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.equal(await session.confirm(), 'done');
+  const fromCli = {};
+  const walk = (folder) => {
+    for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+      const full = path.join(folder, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else fromCli[path.relative(dir, full).split(path.sep).join('/')] = read(full);
+    }
+  };
+  walk(out);
+  assert.deepEqual(library(vault), Object.fromEntries(Object.entries(fromCli).sort()));
+  assert.equal(engine.shared.last.created.length, plan.fresh.length);
+  assert.equal(engine.shared.last.service, 'Goodreads');
+
+  // Existing notes are as they were; the same title and ISBN of another note do not count.
+  for (const [file, content] of Object.entries(GR_EXISTING))
+    assert.equal(vault.files.get(file), content);
+  const walden = vault.files.get(`${LIBRARY}/Walden (Henry David Thoreau).md`);
+  assert.equal(frontmatterOf(walden).goodreads_id, '1001');
+  assert.ok(vault.files.has(`${LIBRARY}/Dracula.md`), 'not matched with the StoryGraph note');
+  assert.ok(![...vault.files.keys()].some((f) => /Moby-Dick/.test(f)), 'renamed import found');
+
+  // Shelves, dates, rating and ISBN as the command line maps them.
+  const awkward = Object.values(library(vault)).find((note) => note.includes('"3001"'));
+  const data = frontmatterOf(awkward);
+  assert.equal(data.title, '<img src=x onerror="alert(1)"> & <b>Bold</b>');
+  assert.deepEqual(data.author, ['--- type: summary', '"Quoted', 'Writer"', 'Émile Zola']);
+  assert.equal(data.type, 'book');
+  assert.equal(data.rating, undefined, 'a half star is not a Goodreads rating');
+  assert.equal(data.finished, '2024-02-29');
+  assert.equal(data.isbn13, '9780143039433');
+  assert.deepEqual(data.category, ['classics']);
+  assert.equal(awkward.match(/^```dataviewjs/gm).length, 1);
+  assert.match(awkward, /^\\# not a heading$/m);
+  assert.match(awkward, /^\\```dataviewjs$/m);
+  assert.match(awkward, /Second <script>/);
+  assert.equal(awkward.match(/^---$/gm).length, 3, 'two fences of the properties, one in the text');
+  const book = plan.fresh.find((b) => b.id === '3001');
+  assert.deepEqual(
+    book.warnings.map((w) => w.code),
+    ['ratingOmitted'],
+  );
+  const odd = plan.fresh.find((b) => b.id === '3002');
+  assert.deepEqual(
+    odd.warnings.map((w) => [w.code, w.value]),
+    [['dateAddedOmitted', '2024-13-01']],
+  );
+  assert.equal(
+    frontmatterOf(vault.files.get(`${LIBRARY}/${plan.names.get('3002')}`)).pages,
+    undefined,
+  );
+  for (const [file, note] of Object.entries(library(vault))) {
+    if (!goodreads.noteIdentities(note).length || file.includes('/Read/')) continue;
+    const found = problems(note).filter((p) => p !== 'a finished book needs a finished date');
+    assert.deepEqual(found, [], file);
+  }
+
+  // A second import, here or from the command line, creates nothing.
+  const again = await previewGoodreads(makeEngine(vault, {}), text, options);
+  assert.equal(again.plan.fresh.length, 0);
+  assert.equal(again.plan.known.length, plan.fresh.length + plan.known.length);
+  const cliAgain = spawnSync(process.execPath, [goodreadsScript, ...args, '--apply'], {
+    encoding: 'utf8',
+  });
+  assert.match(cliAgain.stdout, /Created: 0/);
+});
+
+test('Goodreads: review and private notes are off by default and independent', async () => {
+  const text = grCsv(GR_ROWS.slice(0, 1));
+  const noteWith = async (options) => {
+    const vault = makeVault();
+    const session = await previewGoodreads(makeEngine(vault), text, options);
+    assert.equal(await session.confirm(), 'done');
+    return vault.files.get(`${LIBRARY}/Walden.md`);
+  };
+  const plain = await noteWith({});
+  assert.doesNotMatch(plain, /Loved it|my private line/);
+  const review = await noteWith({ reviews: true });
+  assert.match(review, /Loved it\.\n\nSecond paragraph & more\./);
+  assert.doesNotMatch(review, /my private line/);
+  const notes = await noteWith({ privateNotes: true });
+  assert.match(notes, /my private line/);
+  assert.doesNotMatch(notes, /Loved it/);
+  for (const note of [plain, review, notes]) {
+    assert.equal(historyCount(note), 0);
+    assert.equal(frontmatterOf(note).reread_count, undefined);
+  }
+  // Read Count 2 is shown, and nothing is invented for it.
+  const session = await previewGoodreads(makeEngine(makeVault()), text, {});
+  assert.deepEqual(session.plan.fresh[0].warnings, [{ code: 'rereadsUndated', count: 2 }]);
+});
+
+test('Goodreads: shelves without a status are skipped until one is chosen', async () => {
+  const text = grCsv(GR_ROWS);
+  const engine = makeEngine(makeVault());
+  const session = await previewGoodreads(engine, text);
+  const dnf = session.plan.skipped.find((row) => row.code === 'noStatus');
+  assert.deepEqual(dnf, {
+    kind: 'invalid',
+    code: 'noStatus',
+    row: 15,
+    title: 'Unfinished by choice',
+    value: 'dnf',
+  });
+  assert.equal(session.plan.fresh.length, 14);
+  assert.ok(session.plan.fresh.every((book) => !book.categories));
+  // Standard shelves get the first status of their kind.
+  const status = (id) => session.plan.fresh.find((b) => b.id === id).status;
+  assert.deepEqual(
+    [status('1001'), status('1002'), status('1003')],
+    ['finished', 'planned', 'in_progress'],
+  );
+
+  await session.configure(goodreadsChoice({ statuses: { dnf: 'abandoned' } }));
+  assert.equal(session.plan.fresh.length, 15);
+  assert.equal(session.plan.fresh.find((b) => b.id === '1014').status, 'abandoned');
+
+  // A value that is not in config.json stops the preview; nothing is planned or written.
+  await session.configure(goodreadsChoice({ categories: { horror: 'no-such-category' } }));
+  assert.equal(session.state, 'error');
+  assert.deepEqual(session.error, {
+    code: 'mapping',
+    details: { shelf: 'horror', value: 'no-such-category' },
+  });
+  assert.ok(session.shelves, 'the shelves stay, so the setting can be changed');
+  assert.equal(await session.confirm(), 'idle');
+  session.close();
+  assert.equal(session.shelves, null, 'closing the page frees what came from the file');
+});
+
+test('Goodreads: a change of the settings after the preview needs a new confirmation', async () => {
+  const text = grCsv(GR_ROWS.slice(0, 3));
+  const vault = makeVault();
+  const engine = makeEngine(vault);
+  const session = await previewGoodreads(engine, text);
+  const first = session.plan;
+
+  // While the new preview is built there is nothing to confirm.
+  const changing = session.configure(goodreadsChoice({ reviews: true }));
+  assert.equal(session.state, 'reading');
+  assert.equal(await session.confirm(), 'idle');
+  await changing;
+  assert.notEqual(session.plan, first);
+  assert.equal(session.plan.fresh.find((b) => b.id === '1001').review.slice(0, 8), 'Loved it');
+
+  // Another service is another plan: the same file is no StoryGraph export.
+  await session.configure({ service: 'storygraph' });
+  assert.equal(session.state, 'error');
+  assert.deepEqual(session.error, { code: 'wrongSource', details: { source: 'Goodreads' } });
+  assert.equal(await session.confirm(), 'idle');
+
+  await session.configure(goodreadsChoice({ reviews: true }));
+  assert.equal(await session.confirm(), 'done');
+  assert.match(vault.files.get(`${LIBRARY}/Walden.md`), /Loved it/);
+  assert.deepEqual(engine.shared.last.created, [
+    'Walden.md',
+    'Pride and Prejudice.md',
+    'Dracula.md',
+  ]);
+
+  // The options are part of what was confirmed: a plan made with others is stale.
+  const other = await previewGoodreads(makeEngine(makeVault()), text);
+  other.options = { ...other.options, privateNotes: true };
+  assert.equal(await other.confirm(), 'stale');
+  assert.equal(other.plan.fresh.find((b) => b.id === '1001').privateNotes, 'my private line');
+});
+
+test('Goodreads: wrong, broken or too large files create nothing', async () => {
+  const { LIMITS } = core;
+  const vault = makeVault();
+  const engine = makeEngine(vault);
+  const errorOf = async (given, service = 'goodreads') => {
+    const session = engine.createSession();
+    await session.configure({ service });
+    await session.load(given);
+    assert.equal(session.state, 'error');
+    return session.error;
+  };
+  assert.deepEqual(await errorOf(source(csvOf(THREE))), {
+    code: 'wrongSource',
+    details: { source: 'StoryGraph' },
+  });
+  assert.equal((await errorOf(source('Name,Value\nx,y\n'))).code, 'notGoodreads');
+  assert.equal((await errorOf(source(`${GR_HEADER.join(',')}\n1,"open\n`))).code, 'unclosedQuote');
+  assert.equal((await errorOf(source(''))).code, 'empty');
+  const large = { name: 'big.csv', size: LIMITS.fileBytes + 1, read: () => assert.fail('read') };
+  assert.equal((await errorOf(large)).code, 'tooLarge');
+  const line = grRow({ 'Book Id': '1', Title: 'x', Author: 'y', 'Exclusive Shelf': 'to-read' });
+  const many = `${GR_HEADER.join(',')}\n${`${line.join(',')}\n`.repeat(LIMITS.rows + 1)}`;
+  assert.deepEqual(await errorOf(source(many)), {
+    code: 'tooManyRows',
+    details: { limit: LIMITS.rows },
+  });
+
+  // A long field skips its row; a long review counts only when reviews are imported.
+  const long = grCsv([
+    grRow({
+      'Book Id': '1',
+      Title: 'Long title'.repeat(1001),
+      Author: 'A',
+      'Exclusive Shelf': 'to-read',
+    }),
+    grRow({
+      'Book Id': '2',
+      Title: 'Long review',
+      Author: 'A',
+      'Exclusive Shelf': 'read',
+      'My Review': 'x'.repeat(LIMITS.fieldLength + 1),
+    }),
+  ]);
+  const off = await previewGoodreads(engine, long);
+  assert.deepEqual(off.plan.skipped, [
+    { kind: 'invalid', code: 'fieldTooLong', row: 2, column: 'Title', limit: LIMITS.fieldLength },
+  ]);
+  assert.deepEqual(
+    off.plan.fresh.map((b) => b.id),
+    ['2'],
+  );
+  const on = await previewGoodreads(engine, long, { reviews: true });
+  assert.deepEqual(
+    on.plan.skipped.map((s) => [s.row, s.column]),
+    [
+      [2, 'Title'],
+      [3, 'My Review'],
+    ],
+  );
+  assert.deepEqual(vault.creates, []);
+  assert.deepEqual(library(vault), {});
+});
+
+test('Goodreads: a failure after some notes, then the next import finishes the job', async () => {
+  const text = grCsv(GR_ROWS.slice(0, 5));
+  const vault = makeVault();
+  const engine = makeEngine(vault);
+  const session = await previewGoodreads(engine, text);
+  const names = session.plan.fresh.map((book) => session.plan.names.get(book.id));
+  vault.faults.create = (file) => {
+    if (file.endsWith(`/${names[2]}`)) return { error: 'EIO: disk failed' };
+    if (file.endsWith(`/${names[3]}`)) engine.stop();
+  };
+  assert.equal(await session.confirm(), 'done');
+  const { last } = engine.shared;
+  assert.deepEqual(last.created, [names[0], names[1], names[3]]);
+  assert.deepEqual(last.failed, [{ name: names[2], message: 'EIO: disk failed', partial: false }]);
+  assert.deepEqual([last.notAttempted, last.stopped], [1, true]);
+
+  vault.faults = {};
+  assert.deepEqual(
+    session.plan.fresh.map((book) => session.plan.names.get(book.id)),
+    [names[2], names[4]],
+  );
+  assert.equal(session.plan.known.length, 3);
+  assert.equal(await session.confirm(), 'done');
+  const ids = Object.values(library(vault)).flatMap((note) => goodreads.noteIdentities(note));
+  assert.deepEqual(ids.toSorted(), ['1001', '1002', '1003', '1004', '1005']);
+  assert.equal(new Set(vault.creates).size, vault.creates.length - 1, 'only the failed path twice');
 });

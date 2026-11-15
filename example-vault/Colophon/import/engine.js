@@ -1,4 +1,4 @@
-// Colophon import engine: the part of the StoryGraph import that talks to the vault.
+// Colophon import engine: the part of the StoryGraph and Goodreads imports that talks to the vault.
 //
 // A function body like model.js: no arguments, returns the API object. It gets everything it uses
 // from create(...), and of Obsidian it uses only the public Vault API (vault.create,
@@ -8,11 +8,12 @@
 //   vault     app.vault
 //   model     Colophon/model.js, evaluated
 //   core      Colophon/storygraph.js, evaluated
+//   goodreads Colophon/goodreads.js, evaluated with core
 //   root      vault path of the Colophon folder
 //   registry  an object shared by every import view of this Obsidian instance
 const SCAN_BATCH = 8;
 
-const create = ({ vault, model, core, root, registry }) => {
+const create = ({ vault, model, core, goodreads, root, registry }) => {
   const adapter = vault.adapter;
   const { LIMITS } = core;
   // One run at a time for the whole instance, whatever number of import views is open. `last` is
@@ -29,6 +30,39 @@ const create = ({ vault, model, core, root, registry }) => {
       this.details = details;
     }
   }
+
+  // The services a CSV can come from. Each one converts the records, reads its own identity from a
+  // note and plans; nothing matches a book of one service with a note of the other.
+  //   options of goodreads: { reviews, privateNotes, statuses: { shelf: status }, categories: { shelf: category } }
+  const SERVICES = {
+    storygraph: {
+      label: 'StoryGraph',
+      columns: core.REQUIRED_COLUMNS,
+      convert: (records, catalog) => core.convert(records, catalog),
+      identities: core.noteIdentities,
+      plan: core.plan,
+    },
+    goodreads: {
+      label: 'Goodreads',
+      columns: goodreads.REQUIRED_COLUMNS,
+      convert: (records, catalog, options = {}) => {
+        const map = { statuses: options.statuses ?? {}, categories: options.categories ?? {} };
+        const [problem] = goodreads.checkMap(map, catalog);
+        if (problem)
+          throw new ImportError('mapping', { shelf: problem.shelf, value: problem.value });
+        return goodreads.convert(records, goodreads.settingsOf(catalog), {
+          reviews: !!options.reviews,
+          privateNotes: !!options.privateNotes,
+          statusMap: map.statuses,
+          categoryMap: map.categories,
+          maxFieldLength: LIMITS.fieldLength,
+        });
+      },
+      identities: goodreads.noteIdentities,
+      plan: goodreads.plan,
+    },
+  };
+
   const describe = (error) =>
     error instanceof ImportError || error instanceof core.CsvError
       ? { code: error.code, details: error.details }
@@ -75,7 +109,7 @@ const create = ({ vault, model, core, root, registry }) => {
   // The identities come from the text of the notes as the adapter reads them now, not from the
   // metadata cache, which can be behind the files. Like the command line: every Markdown file of
   // the library folder and its sub-folders, except hidden folders.
-  const scan = async (library) => {
+  const scan = async (library, identitiesOf) => {
     const identities = new Map(); // path -> identities
     const top = []; // names in the library folder itself, without ".md"
     if (!(await adapter.exists(library))) return { identities, top };
@@ -94,7 +128,7 @@ const create = ({ vault, model, core, root, registry }) => {
         await Promise.all(
           notes.slice(i, i + SCAN_BATCH).map(async (path) => {
             try {
-              identities.set(path, core.noteIdentities(await adapter.read(path)));
+              identities.set(path, identitiesOf(await adapter.read(path)));
             } catch (error) {
               // A note that was removed while the folder was read is not there to match.
               if (await adapter.exists(path)) throw error;
@@ -107,23 +141,56 @@ const create = ({ vault, model, core, root, registry }) => {
     return { identities, top };
   };
 
-  const build = async (text) => {
+  // A file of the other service is named as such instead of as a list of missing columns.
+  const convert = (records, catalog, choice) => {
+    const service = SERVICES[choice.service];
+    try {
+      return service.convert(records, catalog, choice.options);
+    } catch (error) {
+      if (!(error instanceof core.CsvError) || !/^(missingColumns|notGoodreads)$/.test(error.code))
+        throw error;
+      const header = new Set((records[0] ?? []).map((name) => name.trim()));
+      const other = Object.entries(SERVICES).find(
+        ([name, { columns }]) =>
+          name !== choice.service && columns.every((column) => header.has(column)),
+      );
+      if (other) throw new ImportError('wrongSource', { source: other[1].label });
+      throw error;
+    }
+  };
+
+  // choice: { service, options } as the page set it when the file was read.
+  const build = async (text, choice) => {
+    if (!Object.hasOwn(SERVICES, choice.service))
+      throw new ImportError('unexpected', { message: choice.service });
     if (text.length > LIMITS.fileBytes)
       throw new core.CsvError('tooLarge', { limit: LIMITS.fileBytes });
     const { catalog, library, headings } = await context();
-    const input = core.convert(core.parseCsv(text, { maxRecords: LIMITS.rows + 1 }), catalog);
-    const found = await scan(library);
+    const service = SERVICES[choice.service];
+    const input = convert(core.parseCsv(text, { maxRecords: LIMITS.rows + 1 }), catalog, choice);
+    const found = await scan(library, service.identities);
     const existing = new Map();
     for (const [path, ids] of found.identities) {
       for (const id of ids) existing.set(id, [...(existing.get(id) ?? []), path]);
     }
-    return { ...core.plan(input, existing, found.top), library, headings, found };
+    return {
+      ...service.plan(input, existing, found.top),
+      service: choice.service,
+      label: service.label,
+      options: choice.options,
+      shelves: input.shelves ?? null,
+      library,
+      headings,
+      found,
+    };
   };
 
   // Everything the preview shows and the run would write. Two plans with the same signature are
   // the same decision for the user.
   const signature = (plan) =>
     JSON.stringify([
+      plan.service,
+      plan.options,
       plan.library,
       plan.headings,
       plan.rows,
@@ -136,7 +203,9 @@ const create = ({ vault, model, core, root, registry }) => {
   // Notes are created one after another. Nothing is rolled back: a note that was created stays, and
   // the next import recognises it by its identity. Every book of the plan gets exactly one outcome.
   const write = async (plan, run) => {
+    const identitiesOf = SERVICES[plan.service].identities;
     const result = {
+      service: plan.label,
       file: run.file,
       library: plan.library,
       total: plan.fresh.length,
@@ -191,7 +260,7 @@ const create = ({ vault, model, core, root, registry }) => {
         if (!(await adapter.exists(path))) continue;
         let ids = [];
         try {
-          ids = core.noteIdentities(await adapter.read(path));
+          ids = identitiesOf(await adapter.read(path));
         } catch {
           // Not readable as a note (a folder with such a name): it still takes the name.
         }
@@ -226,7 +295,7 @@ const create = ({ vault, model, core, root, registry }) => {
           own.add(path);
           dirty.delete(path);
         } else if (note.startsWith(found)) return { type: 'failed', message, partial: true };
-        else if (core.noteIdentities(found).includes(book.id)) return { type: 'existing' };
+        else if (identitiesOf(found).includes(book.id)) return { type: 'existing' };
         else return { type: 'conflict' };
       }
       learn(path, [book.id]);
@@ -269,7 +338,8 @@ const create = ({ vault, model, core, root, registry }) => {
   };
 
   // ---- Sessions ------------------------------------------------------------------------------
-  // A session is the state of one import view: the chosen file and its preview.
+  // A session is the state of one import view: the service, its options, the chosen file and its
+  // preview. Any change of them builds a new preview, which has to be confirmed again.
   //   source  { name, size, read() }: read() returns the text of the file as it is now
   //   finished(result)  called when a run of this session ends, even after the view was closed
   const pause = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -284,6 +354,7 @@ const create = ({ vault, model, core, root, registry }) => {
     };
     const reset = (state) =>
       Object.assign(session, { state, file: null, plan: null, error: null, stale: false });
+    const choice = () => ({ service: session.service, options: session.options });
     const readSource = async () => {
       try {
         return await source.read();
@@ -298,6 +369,9 @@ const create = ({ vault, model, core, root, registry }) => {
       plan: null,
       error: null, // { code, details }
       stale: false, // the plan was recalculated at confirmation and needs a new one
+      service: 'storygraph', // a key of SERVICES
+      options: {}, // options of the service
+      shelves: null, // the shelves of the last Goodreads preview of this file, kept while it is rebuilt
       subscribe(listener) {
         listeners.add(listener);
         return () => listeners.delete(listener);
@@ -307,6 +381,7 @@ const create = ({ vault, model, core, root, registry }) => {
       async load(next) {
         if (closed || shared.run?.session === session) return;
         const mine = ++token;
+        if (next !== source) session.shelves = null;
         source = next;
         reset('reading');
         session.file = { name: next.name, size: next.size };
@@ -315,9 +390,10 @@ const create = ({ vault, model, core, root, registry }) => {
           if (next.size > LIMITS.fileBytes)
             throw new core.CsvError('tooLarge', { limit: LIMITS.fileBytes });
           await pause(); // let the page show that the file is being read
-          const plan = await build(await readSource());
+          const plan = await build(await readSource(), choice());
           if (mine !== token) return;
           session.plan = plan;
+          session.shelves = plan.shelves;
           session.state = 'preview';
         } catch (error) {
           if (mine !== token) return;
@@ -341,7 +417,7 @@ const create = ({ vault, model, core, root, registry }) => {
         let result = null;
         let outcome = 'done';
         try {
-          const current = await build(await readSource());
+          const current = await build(await readSource(), choice());
           if (signature(current) !== signature(session.plan)) {
             if (mine === token) Object.assign(session, { plan: current, stale: true });
             outcome = 'stale';
@@ -371,11 +447,26 @@ const create = ({ vault, model, core, root, registry }) => {
         return outcome;
       },
 
+      // Sets the service and its options. A file that was chosen is read and planned again, so a
+      // preview made with other settings can no longer be confirmed. Returns false during a run.
+      async configure({ service = session.service, options } = {}) {
+        if (closed || shared.run?.session === session) return false;
+        if (!Object.hasOwn(SERVICES, service)) return false;
+        const changed = service !== session.service;
+        if (changed) session.shelves = null;
+        session.options = { ...(options ?? (changed ? {} : session.options)) };
+        session.service = service;
+        if (source) await session.load(source);
+        else notify();
+        return true;
+      },
+
       // Closes the preview and frees the file and the plan.
       clear() {
         if (shared.run?.session === session) return;
         token++;
         source = null;
+        session.shelves = null;
         reset('idle');
         notify();
       },
@@ -385,6 +476,7 @@ const create = ({ vault, model, core, root, registry }) => {
         closed = true;
         token++;
         source = null;
+        session.shelves = null;
         listeners.clear();
         reset('idle');
       },
@@ -395,6 +487,9 @@ const create = ({ vault, model, core, root, registry }) => {
   return {
     shared,
     LIMITS,
+    SERVICES: Object.fromEntries(
+      Object.entries(SERVICES).map(([name, { label }]) => [name, { label }]),
+    ),
     createSession,
     subscribe(listener) {
       shared.listeners.add(listener);

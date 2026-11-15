@@ -69,9 +69,11 @@ export default [
       preprocess: (text, filename) =>
         (/(model|recommend|storygraph|engine)\.js$/.test(filename)
           ? wrap('')
-          : filename.endsWith('lib.js')
-            ? wrap('dv, root')
-            : wrap('dv, input')
+          : filename.endsWith('goodreads.js')
+            ? wrap('core')
+            : filename.endsWith('lib.js')
+              ? wrap('dv, root')
+              : wrap('dv, input')
         ).preprocess(text),
       postprocess: (messages) => wrap('').postprocess(messages),
     },

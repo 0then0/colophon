@@ -2,8 +2,8 @@
 //
 // Bootstrap: see Colophon/book/view.js. Errors here are the only English text outside the locale files.
 //
-// The page only draws. The file is parsed and planned by Colophon/storygraph.js and the notes are
-// created by Colophon/import/engine.js. Dataview runs this script again whenever the vault changes
+// The page only draws. The file is parsed and planned by Colophon/storygraph.js or
+// Colophon/goodreads.js and the notes are created by Colophon/import/engine.js. Dataview runs this script again whenever the vault changes
 // (also while notes are being created), so nothing here starts an import on its own and the state
 // lives outside the script: the session of this block and the run shared by all import pages.
 const COLOPHON = 'Colophon';
@@ -17,13 +17,13 @@ const colophon = await new AsyncFunction('dv', 'root', await dv.app.vault.read(l
   dv,
   libFile.parent.path,
 );
-const { t, label, number, date, joinList } = colophon;
+const { t, label, number, date, joinList, collator, catalog } = colophon;
 
 await colophon.injectStyle('colophon-import-style', 'import/view.css');
 colophon.showProblems(dv.container);
 
 const engine = await colophon.loadImport();
-const { shared, LIMITS } = engine;
+const { shared, LIMITS, SERVICES } = engine;
 const PAGE = 50; // rows of a list shown at first and added by "Show more"
 
 // One session per block. Dataview keeps the container when it redraws, so the session is found
@@ -36,11 +36,18 @@ if (!entry) {
     detach: null,
     shown: {},
     open: new Set(),
+    // The service the reader chose (none at first) and the options of each service.
+    chosen: null,
+    options: { goodreads: { reviews: false, privateNotes: false, statuses: {}, categories: {} } },
     session: engine.createSession({
       finished: (result) => {
         if (typeof Notice !== 'function') return;
         new Notice(
-          t('import.notice', { created: result.created.length, total: result.total }),
+          t('import.notice', {
+            source: result.service,
+            created: result.created.length,
+            total: result.total,
+          }),
           8000,
         );
       },
@@ -74,11 +81,15 @@ const button = (parent, text, id, onClick) => {
   });
   return el;
 };
-const message = (group, { code, kind, ...details }) => {
+// Warnings and skipped rows of Goodreads have messages of their own; errors are shared.
+const message = (group, { code, kind, ...details }, service) => {
   const params = { ...details };
   if (params.date) params.date = date(params.date);
+  // A year is not a quantity: no group separator.
+  if (params.year) params.year = String(params.year);
   if (params.limit && code === 'tooLarge') params.limit = params.limit / 1024 / 1024;
-  return t(`import.${group}.${code}`, params);
+  const prefix = service === 'goodreads' && group !== 'error' ? 'goodreads.' : '';
+  return t(`import.${group}.${prefix}${code}`, params);
 };
 // A long list is cut; the total is always stated and the rest can be opened step by step.
 const limited = (parent, items, key, drawItem) => {
@@ -99,8 +110,28 @@ const limited = (parent, items, key, drawItem) => {
 
 const live = root.createDiv({ cls: 'ci-live' });
 root.createEl('p', { cls: 'ci-intro', text: t('import.intro') });
+
+// The service is chosen explicitly: the file picker waits for it.
+const sources = root.createEl('fieldset', { cls: 'ci-sources' });
+sources.createEl('legend', { text: t('import.source') });
+const radioName = `ci-source-${Math.random().toString(36).slice(2)}`;
+const radios = Object.entries(SERVICES).map(([service, { label: name }]) => {
+  const option = sources.createEl('label', { cls: 'ci-source' });
+  const radio = option.createEl('input', {
+    attr: { type: 'radio', name: radioName, value: service, 'data-ci': `source-${service}` },
+  });
+  option.createSpan({ text: name });
+  radio.addEventListener('change', () => {
+    if (!radio.checked) return;
+    entry.chosen = service;
+    entry.shown = {};
+    session.configure({ service, options: entry.options[service] ?? {} });
+  });
+  return radio;
+});
+
 const picker = root.createEl('label', { cls: 'ci-pick' });
-picker.createSpan({ cls: 'ci-pick-text', text: t('import.choose') });
+const pickerText = picker.createSpan({ cls: 'ci-pick-text' });
 const fileInput = picker.createEl('input', {
   cls: 'ci-file',
   attr: {
@@ -125,6 +156,7 @@ root.createEl('p', {
     field: LIMITS.fieldLength,
   }),
 });
+const settings = root.createDiv({ cls: 'ci-settings' });
 const body = root.createDiv({ cls: 'ci-body' });
 
 // ---- The run and its result (shared by every import page) ----------------------------------------
@@ -194,6 +226,109 @@ const drawResult = (result) => {
   button(box, t('import.result.dismiss'), 'dismiss', () => engine.dismiss());
 };
 
+// ---- Goodreads settings ---------------------------------------------------------------------------
+// The options are kept by the page and handed to the session; every change builds a new preview.
+
+const setOptions = (change) => {
+  const options = { ...entry.options.goodreads, ...change };
+  entry.options.goodreads = options;
+  session.configure({ service: 'goodreads', options });
+};
+
+const checkbox = (parent, text, id, checked, onChange) => {
+  const row = parent.createEl('label', { cls: 'ci-check' });
+  const box = row.createEl('input', { attr: { type: 'checkbox', 'data-ci': id } });
+  box.checked = checked;
+  box.addEventListener('change', () => onChange(box.checked));
+  row.createSpan({ text });
+  return box;
+};
+
+// One select per shelf. A value that is no longer in config.json stays visible until it is changed.
+const shelfList = (parent, shelves, part, group, noneText, disabled) => {
+  const mapping = entry.options.goodreads[part];
+  const items = [...shelves].sort((a, b) => b[1] - a[1] || collator.compare(a[0], b[0]));
+  const values = catalog[part];
+  limited(parent, items, `shelves-${part}`, (li, [name, count]) => {
+    li.addClass('ci-shelf');
+    const id = `${part}-${items.findIndex(([other]) => other === name)}`;
+    const caption = li.createEl('label', {
+      text: t('import.goodreads.shelf', { name, count }),
+      attr: { for: `${radioName}-${id}` },
+    });
+    caption.addClass('ci-shelf-name');
+    const select = li.createEl('select', {
+      cls: 'dropdown',
+      attr: { id: `${radioName}-${id}`, 'data-ci': id },
+    });
+    select.createEl('option', { text: noneText, attr: { value: '' } });
+    for (const entryOf of values)
+      select.createEl('option', { text: entryOf.label, attr: { value: entryOf.key } });
+    const current = Object.hasOwn(mapping, name) ? mapping[name] : '';
+    if (current && !values.some((v) => v.key === current))
+      select.createEl('option', { text: label(group, current), attr: { value: current } });
+    select.value = current;
+    select.disabled = disabled;
+    select.addEventListener('change', () => {
+      const next = { ...entry.options.goodreads[part] };
+      if (select.value) next[name] = select.value;
+      else delete next[name];
+      setOptions({ [part]: next });
+    });
+  });
+};
+
+const drawSettings = (disabled) => {
+  settings.empty();
+  if (entry.chosen !== 'goodreads') return;
+  const options = entry.options.goodreads;
+  const box = settings.createDiv({ cls: 'ci-panel ci-options' });
+  box.createDiv({ cls: 'ci-panel-title', text: t('import.goodreads.settings') });
+  const texts = [
+    checkbox(box, t('import.goodreads.reviews'), 'reviews', options.reviews, (on) =>
+      setOptions({ reviews: on }),
+    ),
+    checkbox(box, t('import.goodreads.privateNotes'), 'private-notes', options.privateNotes, (on) =>
+      setOptions({ privateNotes: on }),
+    ),
+  ];
+  for (const box of texts) box.disabled = disabled;
+  box.createEl('p', { cls: 'ci-hint', text: t('import.goodreads.textHint') });
+
+  const shelves = session.shelves;
+  if (!shelves) {
+    box.createEl('p', { cls: 'ci-hint', text: t('import.goodreads.shelvesLater') });
+    return;
+  }
+  box.createEl('h4', { text: t('import.goodreads.statusTitle') });
+  box.createEl('p', { cls: 'ci-hint', text: t('import.goodreads.statusHint') });
+  if (shelves.exclusive.size)
+    shelfList(
+      box,
+      shelves.exclusive,
+      'statuses',
+      'status',
+      t('import.goodreads.statusNone'),
+      disabled,
+    );
+  box.createEl('h4', { text: t('import.goodreads.categoryTitle') });
+  box.createEl('p', {
+    cls: 'ci-hint',
+    text: t(
+      shelves.other.size ? 'import.goodreads.categoryHint' : 'import.goodreads.noCategoryShelves',
+    ),
+  });
+  if (shelves.other.size)
+    shelfList(
+      box,
+      shelves.other,
+      'categories',
+      'category',
+      t('import.goodreads.categoryNone'),
+      disabled,
+    );
+};
+
 // ---- The preview of this page ---------------------------------------------------------------------
 
 const drawBook = (li, book, plan) => {
@@ -227,11 +362,34 @@ const drawBook = (li, book, plan) => {
       text: t('import.read.earlier', { list: joinList(reads) }),
     });
   }
+  if (book.categories?.length) {
+    li.createDiv({
+      cls: 'ci-book-read',
+      text: t('import.categories', {
+        list: joinList(book.categories.map((key) => label('category', key))),
+      }),
+    });
+  }
+  const added = [book.review && 'My Review', book.privateNotes && 'Private Notes'].filter(Boolean);
+  if (added.length) {
+    li.createDiv({
+      cls: 'ci-book-read',
+      text: t('import.goodreads.added', { list: joinList(added) }),
+    });
+  }
   if (book.warnings.length) {
     const warnings = li.createEl('ul', { cls: 'ci-warnings' });
     for (const warning of book.warnings)
-      warnings.createEl('li', { text: message('warning', warning) });
+      warnings.createEl('li', { text: message('warning', warning, plan.service) });
   }
+};
+
+// Where an already imported book is now: the notes of the library that carry its identity.
+const notesOf = (plan) => {
+  const paths = new Map();
+  for (const [path, ids] of plan.found.identities)
+    for (const id of ids) paths.set(id, [...(paths.get(id) ?? []), path]);
+  return paths;
 };
 
 const drawPreview = (plan) => {
@@ -243,12 +401,15 @@ const drawPreview = (plan) => {
     facts.createEl('dt', { text: name });
     facts.createEl('dd', { text: value });
   };
+  fact(t('import.source'), plan.label);
   fact(t('import.file'), session.file.name);
   fact(t('import.library'), plan.library);
   fact(t('import.rows'), number(plan.rows));
 
   const ambiguous = plan.skipped.filter((row) => row.kind === 'ambiguous').length;
-  const counts = body.createDiv({ cls: 'ci-counts' });
+  // Goodreads rows have one id each, so no row can be ambiguous.
+  const ambiguity = plan.service !== 'goodreads';
+  const counts = body.createDiv({ cls: ambiguity ? 'ci-counts' : 'ci-counts is-three' });
   const count = (value, caption) => {
     const tile = counts.createDiv({ cls: 'ci-count' });
     tile.createEl('b', { text: number(value) });
@@ -256,7 +417,7 @@ const drawPreview = (plan) => {
   };
   count(plan.fresh.length, t('import.count.fresh'));
   count(plan.known.length, t('import.count.known'));
-  count(ambiguous, t('import.count.ambiguous'));
+  if (ambiguity) count(ambiguous, t('import.count.ambiguous'));
   count(plan.skipped.length - ambiguous, t('import.count.invalid'));
 
   if (plan.fresh.length) {
@@ -273,9 +434,23 @@ const drawPreview = (plan) => {
             ? t('import.row', { row: row.row })
             : t('import.rowTitled', { row: row.row, title: row.title }),
       });
-      li.createDiv({ text: message('skip', row) });
+      li.createDiv({ text: message('skip', row, plan.service) });
     });
   }
+  if (plan.known.length) {
+    body.createEl('h3', { text: t('import.knownTitle') });
+    const paths = notesOf(plan);
+    limited(body, plan.known, 'known', (li, book) => {
+      li.createDiv({
+        cls: 'ci-book-title',
+        text: t('stats.titleByAuthors', { title: book.title, authors: joinList(book.authors) }),
+      });
+      for (const path of paths.get(book.id) ?? [])
+        li.createDiv({ cls: 'ci-book-file', text: t('import.knownNote', { path }) });
+    });
+  }
+  if (plan.service === 'goodreads')
+    body.createEl('p', { cls: 'ci-hint', text: t('import.goodreads.about') });
 
   body.createEl('p', { cls: 'ci-hint', text: t('import.safety') });
   body.createEl('p', { cls: 'ci-hint', text: t('import.sync') });
@@ -322,8 +497,17 @@ function draw() {
 
   live.empty();
   body.empty();
-  fileInput.disabled = !!run;
-  picker.toggleClass('is-disabled', !!run);
+  const service = entry.chosen ? SERVICES[entry.chosen] : null;
+  for (const radio of radios) {
+    radio.checked = radio.value === entry.chosen;
+    radio.disabled = !!run;
+  }
+  pickerText.setText(
+    service ? t('import.choose', { source: service.label }) : t('import.chooseSource'),
+  );
+  fileInput.disabled = !!run || !service;
+  picker.toggleClass('is-disabled', !!run || !service);
+  drawSettings(!!run);
   if (run) drawRun(run);
   else if (shared.last) drawResult(shared.last);
 
@@ -332,7 +516,7 @@ function draw() {
   } else if (session.state === 'error') {
     body.createEl('p', {
       cls: 'ci-error',
-      text: message('error', { code: session.error.code, ...session.error.details }),
+      text: message('error', { code: session.error.code, ...session.error.details }, null),
       attr: { role: 'alert' },
     });
   } else if (session.state === 'preview') {

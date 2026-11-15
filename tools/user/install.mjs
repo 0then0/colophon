@@ -381,5 +381,5 @@ Next steps in Obsidian (the installer never changes .obsidian, so these are manu
     options['skip-import']
       ? ''
       : `
-  To import a StoryGraph export, open ${inBooks('Import.md')} and choose the CSV file.`
+  To import a StoryGraph or Goodreads export, open ${inBooks('Import.md')} and choose the CSV file.`
   }`);

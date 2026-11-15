@@ -104,7 +104,13 @@ test('--apply installs the product, config, template, base and statistics note',
       localized('Import.de.md'),
     );
     assert.match(result.stdout, /open Books\/Import\.md and choose the CSV file/);
-    for (const file of ['storygraph.js', 'import/view.js', 'import/engine.js', 'import/view.css']) {
+    for (const file of [
+      'storygraph.js',
+      'goodreads.js',
+      'import/view.js',
+      'import/engine.js',
+      'import/view.css',
+    ]) {
       assert.ok(fs.existsSync(path.join(vault, 'Colophon', file)), file);
     }
     for (const dir of ['Books/Library', 'Books/Notes', 'Books/covers']) {

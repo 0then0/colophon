@@ -68,8 +68,9 @@ with the English interface.
   first, and it never holds back the main books in "Continue a series" and the suggestions.
 - **Summaries.** Notes with `type: summary` (see [Summaries](docs/NOTES.md#summaries)) keep ideas from books you do not read in full
   apart from the library and the statistics.
-- **StoryGraph import inside Obsidian.** Choose the exported CSV on the Import page, check the preview and confirm.
-  The same import also runs from a terminal, and Goodreads exports are imported from a terminal.
+- **Goodreads and StoryGraph import inside Obsidian.** On the Import page choose the service and the exported CSV,
+  map Goodreads shelves to your statuses and categories, check the preview and confirm. Both imports also run from a
+  terminal with the same conversion.
 - **Seven interface languages**, chosen from the Obsidian language or from a setting.
 - **A cover script** that shrinks oversized JPEG covers and keeps the originals.
 
@@ -85,7 +86,7 @@ Colophon itself has no other dependencies. Some optional tools need more:
 - the installer and the command-line importers need [Node.js](https://nodejs.org) 20 or newer (no `npm install`);
 - the cover script needs Python 3.11 or newer and Pillow.
 
-Without Node you can install Colophon by hand and import a StoryGraph library inside Obsidian.
+Without Node you can install Colophon by hand and import a Goodreads or StoryGraph library inside Obsidian.
 
 ## Quick start
 
@@ -105,7 +106,7 @@ Without Node you can install Colophon by hand and import a StoryGraph library in
    settings. Enable the core **Templates** plugin and set its template folder to `Templates`.
 4. Add books:
    - create a note in `Books/Library`, run **Templates: Insert template** and choose `Book`; or
-   - open `Books/Import` and import a StoryGraph export.
+   - open `Books/Import` and import a Goodreads or StoryGraph export.
 5. Open `Books/Statistics` and `Books/Library.base`.
 
 All installer options, the installation by hand (no Node needed) and updating are described in
@@ -147,7 +148,8 @@ numbers, dates and lists use the browser's `Intl`, so Russian has its four plura
 **Tested.** Obsidian 1.15.0 on macOS with Dataview 0.5.70 (the import page with Dataview 0.5.68). The book page, edit
 form, panels, statistics and Library base were checked in a 375 px wide desktop window, in all seven languages, in the
 light and dark default themes and with the themes Minimal, Things, Blue Topaz and AnuPpuccin. The import page was
-checked in the default themes, in a narrow layout, in English and Russian.
+checked with StoryGraph in the default themes, in a narrow layout, in English and Russian; the Goodreads import has not
+been run in Obsidian yet (only against a stand-in vault and in a browser).
 
 **Not tested.** Windows, Linux, iOS and Android; touch behaviour and Obsidian Mobile; Obsidian versions older than
 1.15.0. Version 1.9.10 is the minimum because of Bases, not a version Colophon was run on.

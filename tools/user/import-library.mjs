@@ -3,14 +3,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// The pure logic (CSV, file names, note text, the StoryGraph conversion) is Colophon/storygraph.js,
-// the same file the import page runs inside Obsidian. It is a function body, like model.js.
+// The pure logic (CSV, file names, note text, the StoryGraph conversion) is Colophon/storygraph.js
+// and the Goodreads conversion is Colophon/goodreads.js, the same files the import page runs inside
+// Obsidian. They are function bodies, like model.js.
 const here = path.dirname(fileURLToPath(import.meta.url));
 // The product folder next to the scripts (release archive), or in a clone of the repository.
 export const productFolder = () =>
   [path.join(here, 'Colophon'), path.join(here, '..', '..', 'example-vault', 'Colophon')].find(
     (dir) =>
-      fs.existsSync(path.join(dir, 'model.js')) && fs.existsSync(path.join(dir, 'storygraph.js')),
+      ['model.js', 'storygraph.js', 'goodreads.js'].every((file) =>
+        fs.existsSync(path.join(dir, file)),
+      ),
   );
 const product = productFolder();
 if (!product) {
@@ -18,6 +21,10 @@ if (!product) {
   process.exit(1);
 }
 export const core = new Function(fs.readFileSync(path.join(product, 'storygraph.js'), 'utf8'))();
+export const goodreads = new Function(
+  'core',
+  fs.readFileSync(path.join(product, 'goodreads.js'), 'utf8'),
+)(core);
 
 export const { CsvError, cleanDate, cleanIsbn, neutralize, safeFileName, renderNote } = core;
 
@@ -30,6 +37,8 @@ const CSV_ERRORS = {
   duplicateColumns: () => 'duplicate column names',
   missingColumns: ({ columns }) =>
     `this does not look like a StoryGraph export: missing column(s) ${columns}`,
+  notGoodreads: ({ missing }) =>
+    `this does not look like a Goodreads export: missing column(s) ${missing.map((n) => `"${n}"`).join(', ')}`,
 };
 export const withCsvMessages = (run) => {
   try {

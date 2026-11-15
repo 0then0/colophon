@@ -9,20 +9,20 @@
 // --overwrite, which replaces a previously imported note as a whole (your own text in it included).
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import {
   CsvError,
-  cleanDate,
-  cleanIsbn,
   fail,
+  goodreads,
   loadHeadings,
   loadImportSettings,
   outputFolder,
   parseCsv,
-  planNames,
   readJson,
   renderNote as renderBookNote,
+  takenNames,
   walkMarkdown,
+  withCsvMessages,
 } from './import-library.mjs';
 
 export {
@@ -61,217 +61,22 @@ Shelves without a mapping are listed in the report and are not written to the no
 A book is recognised by its Goodreads "Book Id" (property goodreads_id), so running the import again
 creates nothing new.`;
 
-// ---- Goodreads values -------------------------------------------------------------------------
+// ---- Goodreads values and conversion ---------------------------------------------------------
+// The conversion, the identities and the plan are in Colophon/goodreads.js, shared with the import
+// page in Obsidian. It reports problems as codes; the report below is their English text.
 
-export const REQUIRED_COLUMNS = ['Book Id', 'Title', 'Author', 'Exclusive Shelf'];
+export const { REQUIRED_COLUMNS, BINDINGS, reviewText, convert } = goodreads;
 
-// Exclusive Shelf -> kind of status.
-const SHELF_KINDS = { read: 'finished', 'currently-reading': 'in_progress', 'to-read': 'planned' };
-
-// Binding -> format key, compared without case. Anything else sets no format and is reported.
-export const BINDINGS = {
-  hardcover: ['Hardcover'],
-  paperback: ['Paperback', 'Mass Market Paperback'],
-  ebook: ['Kindle Edition', 'ebook', 'e-book', 'Nook', 'Kindle'],
-  audiobook: ['Audiobook', 'Audible Audio', 'Audio CD', 'Audio Cassette', 'Audio', 'Audible'],
-};
-const BINDING_LOOKUP = new Map(
-  Object.entries(BINDINGS).flatMap(([format, names]) =>
-    names.map((n) => [n.toLowerCase(), format]),
-  ),
-);
-
-const positiveInt = (value) =>
-  /^\d+$/.test(value.trim()) && Number(value) > 0 ? Number(value) : null;
-
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
-// Goodreads stores reviews as light HTML. Line breaks are kept, other tags are dropped.
-export const reviewText = (html) =>
-  html
-    .replace(/\r\n?/g, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
-    .replace(/<[^>\n]*>/g, '')
-    .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (whole, name) => {
-      if (name[0] === '#') {
-        const code =
-          name[1].toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1));
-        return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
-      }
-      return ENTITIES[name.toLowerCase()] ?? whole;
-    })
-    .split('\n')
-    .map((l) => l.trimEnd())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-// ---- Conversion -------------------------------------------------------------------------------
-
-// settings: { statusKeys(kind) -> keys, formats: Set, categories: Set }
-// options: { reviews, privateNotes, categoryMap, statusMap, headings: { notes, quotes } }
-export const convert = (records, settings, options = {}) => {
-  const report = {
-    rows: 0,
-    invalid: [], // { row, reason }
-    unknownShelf: new Map(), // exclusive shelf -> count (rows skipped)
-    unknownBinding: new Map(), // Binding -> count (no format set)
-    unmappedShelves: new Map(), // Bookshelves entry -> count (not written)
-    formatNotInConfig: new Map(),
-    rereads: [], // { title, count }
-    finishedWithoutDate: [],
-    editionYear: 0,
-    warnings: [],
-  };
-  const [header, ...data] = records;
-  if (!header) throw new CsvError('the file is empty');
-  const column = new Map(header.map((name, i) => [name.trim(), i]));
-  const missing = REQUIRED_COLUMNS.filter((name) => !column.has(name));
-  if (missing.length) {
-    throw new CsvError(
-      `this does not look like a Goodreads export: missing column(s) ${missing.map((n) => `"${n}"`).join(', ')}`,
-    );
-  }
-  const categoryMap = options.categoryMap ?? {};
-  const statusMap = options.statusMap ?? {};
-  const books = [];
-  const seenIds = new Set();
-
-  data.forEach((record, index) => {
-    const rowNumber = index + 2; // the header is row 1
-    report.rows++;
-    const get = (name) => (column.has(name) ? (record[column.get(name)] ?? '') : '');
-    if (record.length !== header.length) {
-      report.invalid.push({
-        row: rowNumber,
-        reason: `has ${record.length} fields, the header has ${header.length}`,
-      });
-      return;
-    }
-    const id = get('Book Id')
-      .trim()
-      .replace(/^="?|"$/g, '');
-    const title = get('Title').replace(/\s+/g, ' ').trim();
-    if (!/^\d+$/.test(id))
-      return report.invalid.push({ row: rowNumber, reason: 'no valid Book Id' });
-    if (!title) return report.invalid.push({ row: rowNumber, reason: 'no title' });
-    if (seenIds.has(id))
-      return report.invalid.push({ row: rowNumber, reason: `Book Id ${id} appears twice` });
-    seenIds.add(id);
-
-    // Status comes from the exclusive shelf: three built-in shelves, or a shelf you map yourself.
-    const shelf = get('Exclusive Shelf').trim();
-    let status = null;
-    let kind = SHELF_KINDS[shelf] ?? null;
-    if (kind) status = settings.statusKeys(kind)[0];
-    else if (Object.hasOwn(statusMap, shelf)) {
-      status = statusMap[shelf];
-      kind = settings.kindOf(status);
-    }
-    if (!status || !kind) {
-      report.unknownShelf.set(
-        shelf || '(empty)',
-        (report.unknownShelf.get(shelf || '(empty)') ?? 0) + 1,
-      );
-      return;
-    }
-
-    const authors = [
-      ...new Set(
-        [get('Author'), ...get('Additional Authors').split(',')]
-          .map((a) => a.replace(/\s+/g, ' ').trim())
-          .filter(Boolean),
-      ),
-    ];
-    if (!authors.length) report.warnings.push(`row ${rowNumber} (${title}): no author`);
-
-    const book = { id, title, authors, status, kind, row: rowNumber };
-
-    const rating = Number(get('My Rating').trim() || 0);
-    if (Number.isInteger(rating) && rating >= 1 && rating <= 5) book.rating = rating;
-    else if (!(rating === 0))
-      report.warnings.push(`row ${rowNumber} (${title}): rating "${get('My Rating')}" ignored`);
-
-    const binding = get('Binding').trim();
-    if (binding) {
-      const format = BINDING_LOOKUP.get(binding.toLowerCase());
-      if (!format)
-        report.unknownBinding.set(binding, (report.unknownBinding.get(binding) ?? 0) + 1);
-      else if (!settings.formats.has(format)) {
-        report.formatNotInConfig.set(format, (report.formatNotInConfig.get(format) ?? 0) + 1);
-      } else book.format = format;
-    }
-
-    const pages = positiveInt(get('Number of Pages'));
-    if (pages) book.pages = pages;
-    // The original year says when the work appeared (1854 for Walden); "Year Published" is the year of
-    // the edition that was shelved. The edition year is used only when the original year is missing.
-    const original = positiveInt(get('Original Publication Year'));
-    const edition = positiveInt(get('Year Published'));
-    if (original) book.year = original;
-    else if (edition) {
-      book.year = edition;
-      report.editionYear++;
-    }
-
-    const added = cleanDate(get('Date Added'));
-    if (added) book.dateAdded = added;
-    else if (get('Date Added').trim())
-      report.warnings.push(
-        `row ${rowNumber} (${title}): Date Added "${get('Date Added')}" ignored`,
-      );
-    const read = cleanDate(get('Date Read'));
-    if (kind === 'finished') {
-      if (read) book.finished = read;
-      else report.finishedWithoutDate.push(title);
-    } else if (get('Date Read').trim() && !read) {
-      report.warnings.push(`row ${rowNumber} (${title}): Date Read "${get('Date Read')}" ignored`);
-    }
-
-    const isbn = cleanIsbn(get('ISBN'));
-    const isbn13 = cleanIsbn(get('ISBN13'));
-    if (isbn) book.isbn = isbn;
-    if (isbn13) book.isbn13 = isbn13;
-
-    // Bookshelves become categories only through the map file.
-    const categories = [];
-    for (const name of get('Bookshelves')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)) {
-      if (name === shelf || Object.hasOwn(SHELF_KINDS, name)) continue;
-      if (Object.hasOwn(categoryMap, name)) {
-        if (!categories.includes(categoryMap[name])) categories.push(categoryMap[name]);
-      } else report.unmappedShelves.set(name, (report.unmappedShelves.get(name) ?? 0) + 1);
-    }
-    if (categories.length) book.categories = categories;
-
-    // Earlier reads have no dates in the export, so no reread_count and no history are created:
-    // Colophon checks that the count matches the lines of the Reading history section.
-    const readCount = Number(get('Read Count').trim() || 0);
-    if (readCount > 1) report.rereads.push({ title, count: readCount });
-
-    if (options.reviews && get('My Review').trim()) book.review = reviewText(get('My Review'));
-    if (options.privateNotes && get('Private Notes').trim())
-      book.privateNotes = reviewText(get('Private Notes'));
-    books.push(book);
-  });
-  return { books, report };
-};
-
-export const renderNote = (book, headings) =>
-  renderBookNote(book, headings, { goodreads_id: book.id });
+export const renderNote = (book, headings) => renderBookNote(book, headings, book.provenance);
 
 // ---- Files ------------------------------------------------------------------------------------
 
-// Goodreads ids of notes that are already in the folder (read from their properties only).
+// Goodreads id -> the notes in the folder and its sub-folders that carry it (read from their properties).
 export const existingImports = (dir) => {
   const found = new Map();
   for (const file of walkMarkdown(dir)) {
-    const head = fs.readFileSync(file, 'utf8').slice(0, 8192);
-    const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(head);
-    const id = front && /^goodreads_id:\s*["']?(\d+)["']?\s*$/m.exec(front[1]);
-    if (id) found.set(id[1], file);
+    for (const id of goodreads.noteIdentities(fs.readFileSync(file, 'utf8')))
+      found.set(id, [...(found.get(id) ?? []), file]);
   }
   return found;
 };
@@ -282,6 +87,29 @@ const list = (map, limit = 10) => {
   const entries = [...map].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
   const shown = entries.slice(0, limit).map(([name, n]) => `"${name}" (${n})`);
   return shown.join(', ') + (entries.length > limit ? `, and ${entries.length - limit} more` : '');
+};
+
+const MAP_PROBLEMS = {
+  notObject: () => 'must be a JSON object with "categories" and "statuses"',
+  unknownPart: ({ part }) => `unknown part "${part}"; use "categories" and "statuses"`,
+  category: ({ shelf, value }) =>
+    `shelf "${shelf}" maps to category "${value}", which is not in your config`,
+  status: ({ shelf, value }) =>
+    `shelf "${shelf}" maps to status "${value}", which is not in your config`,
+};
+const SKIPS = {
+  fieldCount: ({ fields, expected }) => `has ${fields} fields, the header has ${expected}`,
+  fieldTooLong: ({ column, limit }) => `"${column}" is longer than ${limit} characters`,
+  invalidId: () => 'no valid Book Id',
+  missingTitle: () => 'no title',
+  duplicateId: ({ id }) => `Book Id ${id} appears twice`,
+};
+// Warnings printed one by one; the other codes are counted in the lines above them.
+const WARNINGS = {
+  noAuthor: () => 'no author',
+  ratingOmitted: ({ value }) => `rating "${value}" ignored`,
+  dateAddedOmitted: ({ value }) => `Date Added "${value}" ignored`,
+  dateReadOmitted: ({ value }) => `Date Read "${value}" ignored`,
 };
 
 const main = () => {
@@ -307,24 +135,11 @@ const main = () => {
   if (positional.length !== 1) fail(`give exactly one Goodreads export file\n\n${USAGE}`, 2);
   if (!options.out) fail(`--out <folder> is required\n\n${USAGE}`, 2);
 
-  const context = loadImportSettings(options, path.dirname(fileURLToPath(import.meta.url)));
+  const context = loadImportSettings(options);
   const { catalog } = context;
   const mapFile = options.map ? readJson(options.map, 'the map file') : {};
-  for (const key of Object.keys(mapFile))
-    if (!['categories', 'statuses'].includes(key))
-      fail(`${options.map}: unknown part "${key}"; use "categories" and "statuses"`);
-  for (const [shelf, target] of Object.entries(mapFile.categories ?? {})) {
-    if (!catalog.has('category', target))
-      fail(
-        `${options.map}: shelf "${shelf}" maps to category "${target}", which is not in your config`,
-      );
-  }
-  for (const [shelf, target] of Object.entries(mapFile.statuses ?? {})) {
-    if (!catalog.has('status', target))
-      fail(
-        `${options.map}: shelf "${shelf}" maps to status "${target}", which is not in your config`,
-      );
-  }
+  const [problem] = goodreads.checkMap(mapFile, catalog);
+  if (problem) fail(`${options.map}: ${MAP_PROBLEMS[problem.code](problem)}`);
 
   const headings = loadHeadings(options, context);
   const out = outputFolder(options);
@@ -337,42 +152,57 @@ const main = () => {
     if (error instanceof CsvError) return fail(`${positional[0]}: ${error.message}`);
     throw error;
   }
-  let result;
+  let input;
   try {
-    result = convert(
-      records,
-      {
-        statusKeys: (kind) => catalog.keysOfKind(kind),
-        kindOf: catalog.kindOf,
-        formats: new Set(catalog.formats.map((f) => f.key)),
-      },
-      {
+    input = withCsvMessages(() =>
+      convert(records, goodreads.settingsOf(catalog), {
         reviews: options.reviews,
         privateNotes: options['private-notes'],
         categoryMap: mapFile.categories,
         statusMap: mapFile.statuses,
-      },
+      }),
     );
   } catch (error) {
     if (error instanceof CsvError) return fail(`${positional[0]}: ${error.message}`);
     throw error;
   }
-  const { books, report } = result;
 
   // Idempotence: a book that is already in the folder (by Goodreads id) is skipped, or replaced with --overwrite.
   const existing = existingImports(out);
-  const fresh = books.filter((b) => !existing.has(b.id));
-  const known = books.filter((b) => existing.has(b.id));
-  const names = planNames(fresh, out);
+  const { fresh, known, skipped, names } = goodreads.plan(input, existing, takenNames(out));
   const writes = [
     ...fresh.map((b) => ({ book: b, file: path.join(out, names.get(b.id)), mode: 'create' })),
     ...(options.overwrite
-      ? known.map((b) => ({ book: b, file: existing.get(b.id), mode: 'overwrite' }))
+      ? known.map((b) => ({ book: b, file: existing.get(b.id).at(-1), mode: 'overwrite' }))
       : []),
   ];
 
+  // The report groups the codes of the conversion as earlier versions printed them.
+  const books = input.books;
+  const warningsOf = (code) =>
+    books.flatMap((book) => book.warnings.filter((w) => w.code === code).map((w) => [book, w]));
+  const tally = (pairs) => {
+    const map = new Map();
+    for (const [, { value }] of pairs) map.set(value, (map.get(value) ?? 0) + 1);
+    return map;
+  };
+  const unknownShelf = new Map();
+  for (const { value } of skipped.filter((s) => s.code === 'noStatus'))
+    unknownShelf.set(value || '(empty)', (unknownShelf.get(value || '(empty)') ?? 0) + 1);
+  const invalid = skipped.filter((s) => s.code !== 'noStatus');
+  const unknownBinding = tally(warningsOf('formatUnknown'));
+  const formatNotInConfig = tally(warningsOf('formatNotInConfig'));
+  const rereads = warningsOf('rereadsUndated');
+  const finishedWithoutDate = [...warningsOf('noFinishDate'), ...warningsOf('finishDateOmitted')];
+  const editionYear = warningsOf('editionYear').length;
+  const warnings = books.flatMap((book) =>
+    book.warnings
+      .filter((w) => Object.hasOwn(WARNINGS, w.code))
+      .map((w) => `row ${book.row} (${book.title}): ${WARNINGS[w.code](w)}`),
+  );
+
   console.log(`Goodreads import${options.apply ? '' : ' (dry run: nothing is written)'}`);
-  console.log(`  file:    ${positional[0]} (${report.rows} row${report.rows === 1 ? '' : 's'})`);
+  console.log(`  file:    ${positional[0]} (${input.rows} row${input.rows === 1 ? '' : 's'})`);
   console.log(`  folder:  ${out}${fs.existsSync(out) ? '' : ' (will be created)'}`);
   console.log('');
   console.log(`${options.apply ? 'Created' : 'To create'}: ${fresh.length}`);
@@ -380,39 +210,39 @@ const main = () => {
     console.log(`${options.apply ? 'Replaced' : 'To replace'}: ${known.length}`);
   else if (known.length)
     console.log(`Skipped, already imported: ${known.length} (use --overwrite to replace them)`);
-  const skipped = [...report.unknownShelf.values()].reduce((s, n) => s + n, 0);
-  if (skipped) {
+  const unknownCount = [...unknownShelf.values()].reduce((s, n) => s + n, 0);
+  if (unknownCount) {
     console.log(
-      `Skipped, unknown exclusive shelf: ${skipped}: ${list(report.unknownShelf)}. Map them with "statuses" in a --map file.`,
+      `Skipped, unknown exclusive shelf: ${unknownCount}: ${list(unknownShelf)}. Map them with "statuses" in a --map file.`,
     );
   }
-  if (report.invalid.length) {
-    console.log(`Skipped, invalid rows: ${report.invalid.length}`);
-    for (const { row, reason } of report.invalid.slice(0, 10))
-      console.log(`  row ${row}: ${reason}`);
+  if (invalid.length) {
+    console.log(`Skipped, invalid rows: ${invalid.length}`);
+    for (const row of invalid.slice(0, 10))
+      console.log(`  row ${row.row}: ${SKIPS[row.code](row)}`);
   }
-  if (report.unknownBinding.size)
-    console.log(`Format not set, unrecognised Binding: ${list(report.unknownBinding)}`);
-  if (report.formatNotInConfig.size)
-    console.log(`Format not set, not in your config: ${list(report.formatNotInConfig)}`);
-  if (report.unmappedShelves.size)
-    console.log(`Shelves not written, no category mapping: ${list(report.unmappedShelves)}`);
-  if (report.rereads.length) {
+  if (unknownBinding.size)
+    console.log(`Format not set, unrecognised Binding: ${list(unknownBinding)}`);
+  if (formatNotInConfig.size)
+    console.log(`Format not set, not in your config: ${list(formatNotInConfig)}`);
+  if (input.unmapped.size)
+    console.log(`Shelves not written, no category mapping: ${list(input.unmapped)}`);
+  if (rereads.length) {
     console.log(
-      `Read more than once: ${report.rereads.length} book(s). Goodreads does not export the dates of earlier reads, so no reread_count and no Reading history were created; add them with "Read again" if you want them.`,
+      `Read more than once: ${rereads.length} book(s). Goodreads does not export the dates of earlier reads, so no reread_count and no Reading history were created; add them with "Read again" if you want them.`,
     );
   }
-  if (report.finishedWithoutDate.length) {
+  if (finishedWithoutDate.length) {
     console.log(
-      `Finished without a Date Read, so no finished date was set: ${report.finishedWithoutDate.length}. Colophon wants one; add it in the note.`,
+      `Finished without a Date Read, so no finished date was set: ${finishedWithoutDate.length}. Colophon wants one; add it in the note.`,
     );
   }
-  if (report.editionYear)
+  if (editionYear)
     console.log(
-      `publication_year taken from "Year Published" (the edition), no original year: ${report.editionYear}`,
+      `publication_year taken from "Year Published" (the edition), no original year: ${editionYear}`,
     );
-  for (const warning of report.warnings.slice(0, 20)) console.log(`warning: ${warning}`);
-  if (report.warnings.length > 20) console.log(`warning: and ${report.warnings.length - 20} more`);
+  for (const warning of warnings.slice(0, 20)) console.log(`warning: ${warning}`);
+  if (warnings.length > 20) console.log(`warning: and ${warnings.length - 20} more`);
 
   if (!options.apply) {
     console.log('');

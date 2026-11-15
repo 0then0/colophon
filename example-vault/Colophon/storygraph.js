@@ -607,6 +607,7 @@ const CODES = {
 return {
   LIMITS,
   CODES,
+  REQUIRED_COLUMNS,
   CsvError,
   parseCsv,
   cleanDate,

@@ -59,7 +59,8 @@ The installer does not touch your Obsidian settings, so these steps are yours:
 4. Create a note in your library folder, run **Templates: Insert template** and choose `Book`. Fill in the title and the
    author.
 5. Open `Statistics` and `Library.base` from the folder where they were installed.
-6. To bring in a StoryGraph library, open `Import`, choose the exported CSV file, check the preview and confirm.
+6. To bring in a Goodreads or StoryGraph library, open `Import`, choose the service and the exported CSV file, check
+   the preview and confirm.
 
 ## Manual installation
 
@@ -72,7 +73,7 @@ The installer does not touch your Obsidian settings, so these steps are yours:
    `Books/Import.md`.
 5. Enable the Templates plugin and set its template folder.
 
-A StoryGraph export can be imported inside Obsidian on the `Import` page, without Node. From a terminal, use
+A Goodreads or StoryGraph export can be imported inside Obsidian on the `Import` page, without Node. From a terminal, use
 `import-goodreads.mjs` or `import-storygraph.mjs` from this archive to preview a CSV import and add `--apply` to write
 notes to the folder specified by `--out`. Keep the scripts next to the `Colophon` folder of the archive: they load the
 import logic from it.

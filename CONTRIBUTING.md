@@ -12,7 +12,8 @@ example-vault/
     model.js         pure settings logic (config.json, statuses, labels), also run by the tools and tests
     book/            book page (view.js, view.css)
     statistics/      statistics page
-    storygraph.js    pure StoryGraph import logic, also run by the command-line importer and the tests
+    storygraph.js    pure StoryGraph import logic and the shared CSV and note code, also run by the command-line importers and the tests
+    goodreads.js     pure Goodreads import logic (built on storygraph.js), also run by the command-line importer and the tests
     import/          import page (view.js, view.css) and engine.js, which creates the notes through the Vault API
     locales/         one JSON file per language (en.json is the source)
     localized/       generated: Library, Summaries, templates and statistics note per language
@@ -84,7 +85,7 @@ anything.
   follows the kind of a status (`kindOf`), never a status key.
 - `model.js` and `lib.js` are function bodies (top-level `return`), not modules. Anything that must be tested in Node
   goes into `model.js`, which must not use Dataview, Obsidian or the DOM; the tests load it with `new Function`.
-  `storygraph.js` follows the same rule, and `import/engine.js` gets the vault as an argument, so the tests run it
+  `storygraph.js` and `goodreads.js` follow the same rule (`goodreads.js` gets `storygraph.js` as its one argument, `core`), and `import/engine.js` gets the vault as an argument, so the tests run it
   against a stand-in vault.
 - Problems in `config.json` are described by locale keys `config.error.<code>`. A new problem code needs a message in
   every locale.

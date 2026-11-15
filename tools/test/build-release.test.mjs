@@ -74,6 +74,7 @@ test('the release archive is reproducible and holds the installer, its docs and 
       'Colophon/lib.js',
       'Colophon/model.js',
       'Colophon/storygraph.js',
+      'Colophon/goodreads.js',
       'Colophon/import/view.js',
       'Colophon/import/engine.js',
       'Colophon/localized/Import.en.md',

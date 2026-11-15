@@ -148,8 +148,8 @@ numbers, dates and lists use the browser's `Intl`, so Russian has its four plura
 **Tested.** Obsidian 1.15.0 on macOS with Dataview 0.5.70 (the import page with Dataview 0.5.68). The book page, edit
 form, panels, statistics and Library base were checked in a 375 px wide desktop window, in all seven languages, in the
 light and dark default themes and with the themes Minimal, Things, Blue Topaz and AnuPpuccin. The import page was
-checked with StoryGraph in the default themes, in a narrow layout, in English and Russian; the Goodreads import has not
-been run in Obsidian yet (only against a stand-in vault and in a browser).
+checked with StoryGraph in the default themes, in a narrow layout, in English and Russian, and with Goodreads on
+Obsidian 1.15.1 in English (choose a file, map shelves, preview, import, import again).
 
 **Not tested.** Windows, Linux, iOS and Android; touch behaviour and Obsidian Mobile; Obsidian versions older than
 1.15.0. Version 1.9.10 is the minimum because of Bases, not a version Colophon was run on.

@@ -73,8 +73,8 @@ preview, so a preview made with other settings can never be confirmed.
   installed template). Covers are not imported.
 
 The page uses only Obsidian's public Vault API and the standard file picker, so nothing in it is desktop-only. The
-StoryGraph import has been tested on Obsidian 1.15.0 on macOS. The Goodreads import has been tested against a stand-in
-vault and in a browser, not yet in Obsidian itself. Neither has been tested on Obsidian Mobile.
+StoryGraph import has been tested on Obsidian 1.15.0 and the Goodreads import on Obsidian 1.15.1, both on macOS with
+Dataview 0.5.68. Neither has been tested on Obsidian Mobile.
 
 ## Import from Goodreads
 

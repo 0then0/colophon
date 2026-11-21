@@ -110,6 +110,9 @@ const limited = (parent, items, key, drawItem) => {
 
 const live = root.createDiv({ cls: 'ci-live' });
 root.createEl('p', { cls: 'ci-intro', text: t('import.intro') });
+const transfers = root.createEl('p', { cls: 'ci-intro' });
+colophon.linkToLibraryNote(transfers, 'Export.md', t('export.link'));
+if (!transfers.hasChildNodes()) transfers.remove();
 
 // The service is chosen explicitly: the file picker waits for it.
 const sources = root.createEl('fieldset', { cls: 'ci-sources' });

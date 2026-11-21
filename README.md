@@ -71,6 +71,8 @@ with the English interface.
 - **Goodreads and StoryGraph import inside Obsidian.** On the Import page choose the service and the exported CSV,
   map Goodreads shelves to your statuses and categories, check the preview and confirm. Both imports also run from a
   terminal with the same conversion.
+- **StoryGraph export inside Obsidian.** Open **Export to StoryGraph** next to the import link in Statistics. Review
+  the books and warnings, then download a CSV for the Goodreads import on StoryGraph. The export reads your vault locally.
 - **Seven interface languages**, chosen from the Obsidian language or from a setting.
 - **A cover script** that shrinks oversized JPEG covers and keeps the originals.
 
@@ -86,7 +88,7 @@ Colophon itself has no other dependencies. Some optional tools need more:
 - the installer and the command-line importers need [Node.js](https://nodejs.org) 20 or newer (no `npm install`);
 - the cover script needs Python 3.11 or newer and Pillow.
 
-Without Node you can install Colophon by hand and import a Goodreads or StoryGraph library inside Obsidian.
+Without Node you can install Colophon by hand and use the import and export pages inside Obsidian.
 
 ## Quick start
 
@@ -123,7 +125,7 @@ stored in the repository; JavaScript queries are already turned on in the vault'
 | [docs/INSTALL.md](docs/INSTALL.md) | Installer options, installation by hand, updating, checking the download |
 | [docs/SETTINGS.md](docs/SETTINGS.md) | `Colophon/config.json`: language, folders, your own statuses, formats and categories |
 | [docs/NOTES.md](docs/NOTES.md) | Properties of a book note, reading history, reading time, the template, summaries |
-| [docs/IMPORT.md](docs/IMPORT.md) | Importing from StoryGraph and Goodreads, covers and the cover script |
+| [docs/IMPORT.md](docs/IMPORT.md) | Importing from StoryGraph and Goodreads, exporting to StoryGraph, covers and the cover script |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Project layout, checks, adding a language, building a release |
 | [SECURITY.md](SECURITY.md) | Reporting a vulnerability and using Colophon safely |
@@ -164,10 +166,10 @@ not measured.
 - DataviewJS runs code from your vault. Enable it only in vaults you trust; see [SECURITY.md](SECURITY.md).
 - A `.base` file cannot load translations at run time, so the view names, column names and status labels of the
   Library are fixed text. The files are generated per language (`Colophon/localized/Library.<code>.base`); changing the
-  Obsidian language later does not change an installed base. The template, the statistics note and the import page are
+  Obsidian language later does not change an installed base. The template, statistics note, import and export pages are
   generated per language for the same reason. Filters and sorting use the stable English keys, so every language shows
   the same books.
-- The "Reading history" heading is not translated, because the statistics parse it.
+- The "Reading history" heading is fixed because statistics and export use it to find earlier reads.
 - Dates in the edit form use your system's date picker, not the Colophon language.
 - Imports only create new notes: existing notes are not updated or merged, and covers are not downloaded.
 - The cover script handles JPEG files only.

@@ -6,7 +6,7 @@
 //   node install.mjs <vault> [options] --apply  install
 //
 // It copies the Colophon folder into the vault, writes Colophon/config.json with the chosen language
-// and folders, and puts the book template, the Library base, the statistics note and the import page
+// and folders, and puts the book template, the Library base, the statistics note and the import and export pages
 // (in the chosen language) where they belong. It never touches the vault's .obsidian folder.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,9 +27,9 @@ Installs Colophon into an Obsidian vault. Without --apply it only prints what it
 Options:
   --apply              write the files (default: show the plan only)
   --force              overwrite files that exist and differ (never deletes anything)
-  --language <code>    interface language and language of the template, Library base and statistics
-                       note: en, ru, es, de, fr, ja, pt-BR (default: auto, which follows Obsidian
-                       and installs the English files)
+  --language <code>    interface language and language of the installed templates, bases and pages:
+                       en, ru, es, de, fr, ja, pt-BR (default: auto, which follows Obsidian and
+                       installs the English files)
   --library <folder>   folder of book notes, relative to the vault (default: Books/Library)
   --notes <folder>     folder of series notes (default: Books/Notes)
   --covers <folder>    folder of cover images (default: Books/covers)
@@ -38,12 +38,13 @@ Options:
   --skip-base          do not install Library.base
   --skip-statistics    do not install the statistics note
   --skip-import        do not install the import page (Import.md)
+  --skip-export        do not install the StoryGraph export page (Export.md)
   --summaries          also install the Summary template and Summaries.base (notes of type "summary"
                        for books you know only from a summary)
   --no-vault-check     install even if the folder has no .obsidian folder
   --help               show this text
 
-Library.base, Statistics.md and Import.md are placed in the parent folder of --library (Books by default).
+Library.base, Statistics.md, Import.md and Export.md are placed in the parent folder of --library (Books by default).
 The installer never creates or changes .obsidian: enable the plugins yourself (see the list at the end).`;
 
 const fail = (message, code = 1) => {
@@ -61,6 +62,7 @@ const FLAGS = new Set([
   'skip-base',
   'skip-statistics',
   'skip-import',
+  'skip-export',
   'summaries',
   'no-vault-check',
 ]);
@@ -225,6 +227,8 @@ if (!options['skip-statistics'])
   addFile(inBooks('Statistics.md'), localized(`Statistics.${filesLanguage}.md`), 'statistics');
 if (!options['skip-import'])
   addFile(inBooks('Import.md'), localized(`Import.${filesLanguage}.md`), 'import');
+if (!options['skip-export'])
+  addFile(inBooks('Export.md'), localized(`Export.${filesLanguage}.md`), 'export');
 if (options.summaries) {
   if (!options['skip-template'])
     addFile(`${templates}/Summary.md`, localized(`Summary.${filesLanguage}.md`), 'template');
@@ -287,7 +291,7 @@ const apply = Boolean(options.apply);
 console.log(`Colophon installer${apply ? '' : ' (plan only: nothing is changed)'}`);
 console.log(`  vault:     ${vault}`);
 console.log(
-  `  language:  ${language}${language === 'auto' ? ' (follows Obsidian; English template, base and statistics note)' : ''}`,
+  `  language:  ${language}${language === 'auto' ? ' (follows Obsidian; English templates, bases and pages)' : ''}`,
 );
 console.log(`  folders:   library ${paths.library}, notes ${paths.notes}, covers ${paths.covers}`);
 console.log('');
@@ -382,4 +386,9 @@ Next steps in Obsidian (the installer never changes .obsidian, so these are manu
       ? ''
       : `
   To import a StoryGraph or Goodreads export, open ${inBooks('Import.md')} and choose the CSV file.`
+  }${
+    options['skip-export']
+      ? ''
+      : `
+  To export to StoryGraph, open ${inBooks('Export.md')} and check the CSV preview.`
   }`);

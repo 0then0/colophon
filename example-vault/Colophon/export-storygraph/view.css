@@ -1,0 +1,55 @@
+.colophon-export {
+  overflow-wrap: anywhere;
+}
+
+.colophon-export .colophon-export-muted {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.colophon-export ul.colophon-export-books {
+  list-style: none;
+  padding-inline-start: 0;
+}
+
+.colophon-export .colophon-export-books > li {
+  border-top: 1px solid var(--background-modifier-border);
+  margin-inline-start: 0;
+  padding: 0.7em 0;
+}
+
+.colophon-export dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  gap: 0.45em 1em;
+  margin: 0.5em 0;
+}
+
+.colophon-export dt {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.colophon-export dd {
+  margin: 0;
+}
+
+.colophon-export .colophon-export-value {
+  white-space: pre-wrap;
+}
+
+.colophon-export .colophon-export-warnings {
+  padding-inline-start: 1.3em;
+  margin: 0.5em 0 0;
+}
+
+.colophon-export .colophon-export-more:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em 1em;
+}
+
+.colophon-export .colophon-export-error {
+  color: var(--text-error);
+}

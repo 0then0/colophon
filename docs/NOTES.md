@@ -39,6 +39,9 @@ cssclasses:
 translated, so notes and queries keep working when you change the language. The allowed values are the lists from
 [Settings](SETTINGS.md); values that are not in a list are shown as they are.
 
+For StoryGraph edition matching, use `isbn` for ISBN-10 and `isbn13` for ISBN-13. Quote them in YAML to preserve
+leading zeros, for example `isbn: '0141439513'`. A full `date_added` is required for a book to be exported.
+
 ## Reading history
 
 "Read again" adds a section like this to the note. The statistics read it, so keep the heading and the line format:

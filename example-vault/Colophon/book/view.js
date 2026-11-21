@@ -15,6 +15,7 @@ const colophon = await new AsyncFunction('dv', 'root', await dv.app.vault.read(l
 );
 const { app, t, label, number, date, state, paths } = colophon;
 const { list, coverFile, joinList, listParts, collator, HISTORY_HEADING, kindOf } = colophon;
+const { readingHistorySection } = colophon;
 
 const page = dv.current();
 if (!page) return;
@@ -327,31 +328,28 @@ if (kindOf(page.status) === 'finished') {
         const score =
           typeof fm.rating === 'number' && fm.rating > 0 ? `  - rating: ${fm.rating}` : null;
         await app.vault.process(noteFile, (text) => {
-          const lines = text.split('\n');
-          const head = lines.findIndex((l) => l.trim() === HISTORY_HEADING);
-          if (head < 0) {
+          const newline = text.includes('\r\n') ? '\r\n' : '\n';
+          const lines = text.split(/\r?\n/);
+          const { heading, listLines } = readingHistorySection(lines);
+          if (heading < 0) {
             return (
-              text.replace(/\s*$/, '') +
-              `\n\n${HISTORY_HEADING}\n\n${line}\n${score ? score + '\n' : ''}`
+              text.trimEnd() +
+              ['', '', HISTORY_HEADING, '', line, ...(score ? [score] : []), ''].join(newline)
             );
           }
-          let stop = head + 1;
-          while (stop < lines.length && !lines[stop].startsWith('#')) stop++;
           // This read may already be listed in the history: extend that line instead of duplicating it.
           const known = fm.finished
-            ? lines.findIndex(
-                (l, i) =>
-                  i > head && i < stop && l.startsWith('- ') && l.includes(`→ ${fm.finished}`),
+            ? listLines.find(
+                (i) => lines[i].startsWith('- ') && lines[i].includes(`→ ${fm.finished}`),
               )
-            : -1;
-          if (known >= 0) {
+            : undefined;
+          if (known !== undefined) {
             if (score) lines.splice(known + 1, 0, score);
-            return lines.join('\n');
+          } else {
+            const end = (listLines.at(-1) ?? heading) + 1;
+            lines.splice(end, 0, line, ...(score ? [score] : []));
           }
-          let end = head + 1;
-          for (let i = head + 1; i < stop; i++) if (/^\s*- /.test(lines[i])) end = i + 1;
-          lines.splice(end, 0, line, ...(score ? [score] : []));
-          return lines.join('\n');
+          return lines.join(newline);
         });
         await setProps({
           status: colophon.keysOfKind('in_progress')[0],

@@ -290,6 +290,61 @@ const readingDays = (started, finished) => {
   return from && to ? Math.round((to - from) / 864e5) : null;
 };
 
+// The reader and "Read again" use the same section so examples in notes stay out of the history.
+const readingHistorySection = (lines) => {
+  const frontmatterEnd = /^\uFEFF?---[ \t]*$/.test(lines[0])
+    ? lines.findIndex((line, index) => index > 0 && /^(?:---|\.\.\.)[ \t]*$/.test(line))
+    : -1;
+  let heading = -1;
+  let fence = '';
+  let commentEnd = '';
+  const listLines = [];
+  for (let i = frontmatterEnd + 1; i < lines.length; i++) {
+    const line = lines[i];
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence) {
+      if (
+        marker &&
+        marker[1][0] === fence[0] &&
+        marker[1].length >= fence.length &&
+        !marker[2].trim()
+      )
+        fence = '';
+      continue;
+    }
+    if (commentEnd) {
+      if (line.includes(commentEnd)) commentEnd = '';
+      continue;
+    }
+    const comment = /^ {0,3}(<!--|%%)(.*)$/.exec(line);
+    if (comment) {
+      const close = comment[1] === '%%' ? '%%' : '-->';
+      if (!comment[2].includes(close)) commentEnd = close;
+      continue;
+    }
+    if (marker && (marker[1][0] === '~' || !marker[2].includes('`'))) {
+      fence = marker[1];
+      continue;
+    }
+    if (/^ {0,3}#{1,6}(?:[ \t]|$)/.test(line)) {
+      if (heading >= 0) break;
+      if (line.trim() === HISTORY_HEADING) heading = i;
+    } else if (heading >= 0 && /^\s*- /.test(line)) listLines.push(i);
+  }
+  return { heading, listLines };
+};
+
+// Keep unknown endpoints ("?") so callers can distinguish undated entries from confirmed dates.
+const parseReadingHistory = (text) => {
+  const lines = text.split(/\r?\n/);
+  const { listLines } = readingHistorySection(lines);
+  const entry = /^- (\S+?)[ \t]*(?:\u2192|->|\u2014|\u2013|-)[ \t]*(\d{4}-\d{2}-\d{2}|\?)[ \t]*$/;
+  return listLines.flatMap((index) => {
+    const match = entry.exec(lines[index]);
+    return match ? [{ started: match[1], finished: match[2] }] : [];
+  });
+};
+
 return {
   KINDS,
   HISTORY_HEADING,
@@ -303,4 +358,6 @@ return {
   catalog,
   toUtcDate,
   readingDays,
+  readingHistorySection,
+  parseReadingHistory,
 };

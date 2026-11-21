@@ -15,6 +15,7 @@ example-vault/
     storygraph.js    pure StoryGraph import logic and the shared CSV and note code, also run by the command-line importers and the tests
     goodreads.js     pure Goodreads import logic (built on storygraph.js), also run by the command-line importer and the tests
     import/          import page (view.js, view.css) and engine.js, which creates the notes through the Vault API
+    export-storygraph/ StoryGraph export preview and pure CSV planner
     locales/         one JSON file per language (en.json is the source)
     localized/       generated: Library, Summaries, templates and statistics note per language
     config.json      the settings block

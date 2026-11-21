@@ -140,15 +140,13 @@ const capitalize = (text) => text.charAt(0).toLocaleUpperCase(colophon.locale) +
 const books = colophon.books().array();
 
 // Rereads: the dates of earlier reads are listed in the Reading history section of the note.
-const HISTORY_LINE = /^- \S+\s*(?:→|->|—|–|-)\s*(\d{4}-\d{2}-\d{2})\s*$/gm;
 const readDates = async (p) => {
   const dates = new Set();
   const main = is(p, 'finished') ? dt(p.finished) : null;
   const last = main ? main.toFormat('yyyy-MM-dd') : null;
   if (last) dates.add(last);
-  if (p.reread_count > 0) {
-    const text = await dv.io.load(p.file.path);
-    for (const m of (text || '').matchAll(HISTORY_LINE)) dates.add(m[1]);
+  for (const read of (await colophon.readHistory(p)) ?? []) {
+    if (read.finished !== '?') dates.add(read.finished);
   }
   return { dates, last };
 };
@@ -815,19 +813,9 @@ if (rereads.length) {
   paragraph(t('stats.detail.rereadsNone'));
 }
 
-// The import page is installed next to the statistics note, in the parent folder of the library.
-const importPath = [...paths.library.split('/').slice(0, -1), 'Import.md'].join('/');
-if (app.vault.getAbstractFileByPath(importPath)) {
-  const importLink = dv.container
-    .createDiv({ cls: 'rb-import' })
-    .createEl('a', { cls: 'internal-link', text: t('import.link'), attr: { href: importPath } });
-  importLink.addEventListener('mousedown', (e) => e.stopPropagation());
-  importLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    app.workspace.openLinkText(importPath, '', e.metaKey || e.ctrlKey ? 'tab' : false);
-  });
-}
+const transfers = dv.container.createDiv({ cls: 'rb-transfers' });
+colophon.linkToLibraryNote(transfers, 'Import.md', t('import.link'));
+colophon.linkToLibraryNote(transfers, 'Export.md', t('export.link'));
 
 // Redrawn by Dataview: open the list that was open before.
 if (state.drill) openDrill(state.drill);

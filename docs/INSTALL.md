@@ -25,8 +25,8 @@ Try it on a copy of the vault first if you have notes you care about.
 What the installer does:
 
 - copies the `Colophon` folder into the vault and writes `Colophon/config.json` with your language and folders;
-- installs the book template (`Templates/Book.md`), `Library.base`, `Statistics.md` and the import page `Import.md` in
-  the chosen language. The last three go to the parent folder of the library folder (`Books` by default);
+- installs the book template (`Templates/Book.md`), `Library.base`, `Statistics.md`, `Import.md` and `Export.md` in
+  the chosen language. The base and the three book-related pages go to the parent of the library folder (`Books` by default);
 - creates the library, notes and covers folders if they are missing;
 - never overwrites a file that exists and differs. It lists the conflicts and stops without writing anything. `--force`
   overwrites only those files and never deletes anything. Running it twice is safe;
@@ -38,12 +38,12 @@ Options:
 - `--force`: overwrite files that exist and differ.
 - `--summaries`: also install `Templates/Summary.md` and `Summaries.base` (see [Summaries](https://github.com/0then0/colophon/blob/main/docs/NOTES.md#summaries)). They are not
   installed by default.
-- `--language <code>`: `en`, `ru`, `es`, `de`, `fr`, `ja` or `pt-BR`. Sets the interface language and the language of
-  the template, base and statistics note. The default is `auto`: the interface follows Obsidian and the files are English.
+- `--language <code>`: `en`, `ru`, `es`, `de`, `fr`, `ja` or `pt-BR`. Sets the language of the interface and installed
+  templates, bases and pages. With `auto`, the interface follows Obsidian and the files are English.
 - `--library <folder>`, `--notes <folder>`, `--covers <folder>`: folders of book notes, series notes and cover images,
   default `Books/Library`, `Books/Notes` and `Books/covers`.
 - `--templates <folder>`: folder for the book template, default `Templates`.
-- `--skip-template`, `--skip-base`, `--skip-statistics`, `--skip-import`: leave that file out.
+- `--skip-template`, `--skip-base`, `--skip-statistics`, `--skip-import`, `--skip-export`: leave that file out.
 - `--no-vault-check`: install into a folder that has no `.obsidian` folder yet.
 
 Folders are written relative to the vault root. The installer refuses folders outside the vault and hidden folders.
@@ -61,6 +61,8 @@ The installer does not touch your Obsidian settings, so these steps are yours:
 5. Open `Statistics` and `Library.base` from the folder where they were installed.
 6. To bring in a Goodreads or StoryGraph library, open `Import`, choose the service and the exported CSV file, check
    the preview and confirm.
+7. To take your library to StoryGraph, open **Export to StoryGraph** from `Statistics` or `Import`, check the preview
+   and download the CSV for the [Goodreads import on StoryGraph](https://app.thestorygraph.com/import-goodreads).
 
 ## Manual installation
 
@@ -70,7 +72,8 @@ The installer does not touch your Obsidian settings, so these steps are yours:
 3. Edit `Colophon/config.json` to set your folders and language.
 4. From `Colophon/localized/` copy the files in your language and rename them: `Book.<code>.md` to `Templates/Book.md`,
    `Library.<code>.base` to `Books/Library.base`, `Statistics.<code>.md` to `Books/Statistics.md`, `Import.<code>.md` to
-   `Books/Import.md`.
+   `Books/Import.md` and `Export.<code>.md` to `Books/Export.md`. If you set a different library folder, put the base
+   and these three pages in its parent folder.
 5. Enable the Templates plugin and set its template folder.
 
 A Goodreads or StoryGraph export can be imported inside Obsidian on the `Import` page, without Node. From a terminal, use
@@ -95,7 +98,7 @@ The archive holds this file only. The rest is in the repository:
 - [Settings](https://github.com/0then0/colophon/blob/main/docs/SETTINGS.md): language, folders, your own statuses,
   formats and categories.
 - [Book notes](https://github.com/0then0/colophon/blob/main/docs/NOTES.md): properties, reading history, summaries.
-- [Importing books](https://github.com/0then0/colophon/blob/main/docs/IMPORT.md): StoryGraph, Goodreads, covers.
+- [Importing and exporting books](https://github.com/0then0/colophon/blob/main/docs/IMPORT.md): StoryGraph, Goodreads, covers.
 - [README](https://github.com/0then0/colophon#readme): overview, requirements, compatibility.
 
 ## Checking the download

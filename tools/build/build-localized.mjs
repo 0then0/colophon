@@ -13,11 +13,12 @@
 //   example-vault/Colophon/localized/Book.<code>.md
 //   example-vault/Colophon/localized/Statistics.<code>.md
 //   example-vault/Colophon/localized/Import.<code>.md
+//   example-vault/Colophon/localized/Export.<code>.md
 //   example-vault/Colophon/localized/Summaries.<code>.base
 //   example-vault/Colophon/localized/Summary.<code>.md
 // and the English versions are also installed as the demo vault's working files:
 //   example-vault/Books/Library.base, example-vault/Templates/Book.md, example-vault/Books/Statistics.md,
-//   example-vault/Books/Import.md,
+//   example-vault/Books/Import.md, example-vault/Books/Export.md,
 //   example-vault/Books/Summaries.base, example-vault/Templates/Summary.md
 import fs from 'node:fs';
 import path from 'node:path';
@@ -110,6 +111,8 @@ for (const [code, messages] of Object.entries(locales)) {
   outputs.set(path.join(localizedDir, `Statistics.${code}.md`), statistics);
   const importPage = render(read(path.join(ROOT, 'tools/build/sources/Import.md')), t, values);
   outputs.set(path.join(localizedDir, `Import.${code}.md`), importPage);
+  const exportPage = render(read(path.join(ROOT, 'tools/build/sources/Export.md')), t, values);
+  outputs.set(path.join(localizedDir, `Export.${code}.md`), exportPage);
   const summary = render(read(path.join(ROOT, 'tools/build/sources/Summary.md')), t, values);
   outputs.set(path.join(localizedDir, `Summary.${code}.md`), summary);
 
@@ -118,6 +121,7 @@ for (const [code, messages] of Object.entries(locales)) {
     outputs.set(path.join(VAULT, 'Templates', 'Book.md'), book);
     outputs.set(path.join(VAULT, 'Books', 'Statistics.md'), statistics);
     outputs.set(path.join(VAULT, 'Books', 'Import.md'), importPage);
+    outputs.set(path.join(VAULT, 'Books', 'Export.md'), exportPage);
     outputs.set(
       path.join(VAULT, 'Books', 'Summaries.base'),
       outputs.get(path.join(localizedDir, 'Summaries.en.base')),

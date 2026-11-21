@@ -78,6 +78,10 @@ test('the release archive is reproducible and holds the installer, its docs and 
       'Colophon/import/view.js',
       'Colophon/import/engine.js',
       'Colophon/localized/Import.en.md',
+      'Colophon/export-storygraph/engine.js',
+      'Colophon/export-storygraph/view.js',
+      'Colophon/export-storygraph/view.css',
+      'Colophon/localized/Export.fr.md',
       'Colophon/config.json',
       'Colophon/localized/Library.en.base',
     ]) {
@@ -115,6 +119,10 @@ test('the release archive is reproducible and holds the installer, its docs and 
     assert.equal(install.status, 0, install.stderr);
     assert.ok(fs.existsSync(path.join(vault, 'Colophon', 'lib.js')));
     assert.ok(fs.existsSync(path.join(vault, 'Books', 'Library.base')));
+    assert.equal(
+      read(path.join(vault, 'Books', 'Export.md')),
+      read(path.join(COLOPHON, 'localized', 'Export.fr.md')),
+    );
     assert.deepEqual(fs.readdirSync(path.join(vault, '.obsidian')), []);
 
     for (const name of ['import-goodreads.mjs', 'import-storygraph.mjs']) {

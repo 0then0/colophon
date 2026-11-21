@@ -15,15 +15,9 @@ const asList = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
 
 // Number of reads listed in the "Reading history" section ("- 2024-08-02 → 2024-08-30").
 export const historyCount = (text) => {
-  const lines = text.split('\n');
-  const head = lines.findIndex((l) => l.trim() === model.HISTORY_HEADING);
-  let count = 0;
-  if (head >= 0) {
-    for (let i = head + 1; i < lines.length && !lines[i].startsWith('#'); i++) {
-      if (/^- \S+\s*→\s*\d{4}-\d{2}-\d{2}\s*$/.test(lines[i])) count++;
-    }
-  }
-  return count;
+  const lines = text.split(/\r?\n/);
+  const { listLines } = model.readingHistorySection(lines);
+  return listLines.filter((i) => /^- \S+\s*→\s*\d{4}-\d{2}-\d{2}\s*$/.test(lines[i])).length;
 };
 
 // Returns a list of problems (strings) for a note whose properties are `data` and whose full text

@@ -1,4 +1,4 @@
-# Adding and importing books
+# Adding, importing and exporting books
 
 A new book is a note with the [book properties](NOTES.md): use the template, or write the properties yourself. The edit form on the
 book page accepts a comma-separated list for authors and translators and a file name for the cover.
@@ -10,6 +10,8 @@ The importers only create new notes. They never download anything, and covers ar
 service is never matched with a note imported from the other: Goodreads imports are recognised by `goodreads_id`,
 StoryGraph imports by `storygraph_id` or `storygraph_row`, never by ISBN or title. Importing the same library from both
 gives two notes per book.
+
+To take your Colophon library to StoryGraph, use [Export to StoryGraph](#export-to-storygraph).
 
 ## Import inside Obsidian
 
@@ -199,6 +201,37 @@ Both ways follow the same rules:
 - Rows with ambiguous matches are reported and skipped. Different editions stay separate. Matching uses the
   import properties, so renamed notes still match and other notes with the same title or ISBN stay separate. The
   importer leaves existing notes intact.
+
+## Export to StoryGraph
+
+1. Open **Export to StoryGraph** from `Statistics` or `Import`, or open `Export.md` directly. A note with
+   `await dv.view("Colophon/export-storygraph")` in a `dataviewjs` block also works.
+2. Check the counts, the values in the preview and the warnings. Like Statistics, the export finds notes with
+   `type: book` throughout the vault. Each eligible note gives one row.
+3. Choose **Download CSV**. The file contains the snapshot shown on screen. Colophon reads the vault locally and
+   leaves the notes intact.
+4. Upload the CSV directly through StoryGraph's [Goodreads import](https://app.thestorygraph.com/import-goodreads).
+   Spreadsheet editors can reinterpret dates and ISBNs when opening the file.
+
+The CSV follows the exact headings and order of the [StoryGraph Bulk Import Template](https://thestorygraph.freshdesk.com/support/solutions/articles/79000146300-bulk-import-template).
+
+- `Title` uses the title property or the note name. The first author goes in `Author` and any others go in
+  `Additional Authors`, separated by commas. A title or author cell that could run as a spreadsheet formula causes
+  the row to be skipped, so exported matching text keeps its original characters.
+- `Date Added` needs a full `date_added` in the note, exported as `yyyy/mm/dd`. Books with no author, no valid
+  added date or no configured status are listed as skipped.
+- Statuses of kind `planned`, `in_progress`, `finished` and `abandoned` become `to-read`, `currently-reading`,
+  `read` and `did-not-finish`. Custom statuses use their configured kind and the preview shows the mapping.
+- A `read` row carries `Read Count` of `1` and the latest confirmed finish date, if available. The preview lists
+  the other finish dates kept in the vault. For any other shelf, `Read Count` is `0` and `Date Read` is empty,
+  including while rereading a book you previously finished.
+- On `read` rows, `My Rating` keeps ratings from 0.5 to 5 in half-star increments. The CSV uses `0` for unrated
+  books and other shelves. If a stored rating is omitted, the preview says why.
+- Valid ISBNs are stored as plain text digits (or `X` for an ISBN-10 check digit). A valid ISBN-10 also supplies its
+  equivalent ISBN-13 for edition matching. If the two identifiers disagree, the export uses the value from
+  `isbn13` and shows a warning. Some rows may require edition matching by title and author.
+
+Personal notes, reviews, covers, start dates and the full reading history stay in the vault.
 
 ## Covers
 

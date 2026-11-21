@@ -8,19 +8,20 @@ const app = dv.app;
 
 // The pure part (settings, kinds, labels) lives in model.js so that the Node tools run the same code.
 const model = new Function(await app.vault.adapter.read(`${root}/model.js`))();
-const { HISTORY_HEADING, normalizeTag, toUtcDate, readingDays } = model;
+const { HISTORY_HEADING, normalizeTag, toUtcDate, readingDays, readingHistorySection } = model;
 
 // The recommendation logic is only needed by the statistics page, so it is loaded on request.
 const loadRecommend = async () =>
   new Function(await app.vault.adapter.read(`${root}/recommend.js`))();
 
-// The StoryGraph and Goodreads imports (shared with the command-line importers) are only needed by
-// the import page.
+const readCode = (file) => app.vault.adapter.read(`${root}/${file}`);
+const loadStoryGraph = async () => new Function(await readCode('storygraph.js'))();
+
+// The StoryGraph and Goodreads imports (shared with the command-line importers) are only needed here.
 const loadImport = async () => {
-  const read = (file) => app.vault.adapter.read(`${root}/${file}`);
-  const core = new Function(await read('storygraph.js'))();
-  const goodreads = new Function('core', await read('goodreads.js'))(core);
-  return new Function(await read('import/engine.js'))().create({
+  const core = await loadStoryGraph();
+  const goodreads = new Function('core', await readCode('goodreads.js'))(core);
+  return new Function(await readCode('import/engine.js'))().create({
     vault: app.vault,
     model,
     core,
@@ -178,6 +179,25 @@ const coverFile = (page) => {
 
 const books = () => dv.pages().where((p) => p.type === 'book');
 
+const readHistory = async (page) => {
+  const count = page.reread_count;
+  if (!((typeof count === 'number' || typeof count === 'string') && count > 0)) return [];
+  const text = await dv.io.load(page.file.path);
+  return text == null ? null : model.parseReadingHistory(text);
+};
+
+const linkToLibraryNote = (container, name, text) => {
+  const path = [...config.paths.library.split('/').slice(0, -1), name].join('/');
+  if (!app.vault.getAbstractFileByPath(path)) return;
+  const link = container.createEl('a', { cls: 'internal-link', text, attr: { href: path } });
+  link.addEventListener('mousedown', (event) => event.stopPropagation());
+  link.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    app.workspace.openLinkText(path, '', event.metaKey || event.ctrlKey ? 'tab' : false);
+  });
+};
+
 // Styles go to document.head: a long note can be virtualised and the block leaves the DOM,
 // while hiding the inline title and Properties must not flicker because of that.
 const injectStyle = async (id, relativePath) => {
@@ -208,6 +228,9 @@ return {
   stripLink,
   coverFile,
   books,
+  readHistory,
+  readingHistorySection,
+  linkToLibraryNote,
   injectStyle,
   state: window.colophonState,
   catalog,
@@ -221,5 +244,6 @@ return {
   readingDays,
   loadRecommend,
   loadImport,
+  loadStoryGraph,
   HISTORY_HEADING,
 };

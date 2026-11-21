@@ -407,22 +407,37 @@ const FORMATS = new Map([
 ]);
 const REQUIRED_COLUMNS = ['Title', 'Authors', 'ISBN/UID', 'Read Status'];
 
-const validIsbn13 = (isbn) =>
-  /^97[89]/.test(isbn) &&
-  [...isbn].reduce((sum, digit, i) => sum + Number(digit) * (i % 2 ? 3 : 1), 0) % 10 === 0;
+const isbn13CheckDigit = (prefix) => {
+  const sum = [...prefix].reduce((total, digit, i) => total + Number(digit) * (i % 2 ? 3 : 1), 0);
+  return String((10 - (sum % 10)) % 10);
+};
 
-const identifiers = (row) => {
-  const raw = row['ISBN/UID'].trim();
-  const isbn = cleanIsbn(raw);
+const validatedIsbn = (value) => {
+  const isbn = cleanIsbn(value);
   if (isbn?.length === 10) {
     const sum = [...isbn].reduce(
       (total, digit, i) => total + (digit === 'X' ? 10 : Number(digit)) * (10 - i),
       0,
     );
-    // StoryGraph can use equivalent ISBN-10 and ISBN-13 values on different editions.
-    if (sum % 11 === 0) return { isbn, storygraph_id: isbn };
+    return sum % 11 === 0 ? isbn : null;
   }
-  if (isbn?.length === 13 && validIsbn13(isbn)) return { isbn13: isbn, storygraph_id: isbn };
+  return isbn && /^97[89]/.test(isbn) && isbn13CheckDigit(isbn.slice(0, -1)) === isbn.at(-1)
+    ? isbn
+    : null;
+};
+
+const toIsbn13 = (isbn) => {
+  if (isbn.length === 13) return isbn;
+  const prefix = `978${isbn.slice(0, -1)}`;
+  return prefix + isbn13CheckDigit(prefix);
+};
+
+const identifiers = (row) => {
+  const raw = row['ISBN/UID'].trim();
+  const isbn = validatedIsbn(raw);
+  // StoryGraph can use equivalent ISBN-10 and ISBN-13 values on different editions.
+  if (isbn?.length === 10) return { isbn, storygraph_id: isbn };
+  if (isbn) return { isbn13: isbn, storygraph_id: isbn };
   const uid = raw.toUpperCase();
   if (/^B[A-Z0-9]{9}$/.test(uid)) return { storygraph_uid: uid, storygraph_id: uid };
 
@@ -612,6 +627,8 @@ return {
   parseCsv,
   cleanDate,
   cleanIsbn,
+  validatedIsbn,
+  toIsbn13,
   neutralize,
   safeFileName,
   nameKey,

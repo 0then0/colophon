@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Export to StoryGraph** from Statistics or Import. Review the rows, skipped notes and omitted data, then download a
+  local CSV using StoryGraph's Goodreads import template. Finished books carry the latest confirmed finish date.
+
 ## [0.6.0] - 2026-11-15
 
 ### Added

@@ -54,7 +54,7 @@ test('without --apply nothing is changed and the plan is printed', () => {
   }
 });
 
-test('--apply installs the product, config, template, base and statistics note', () => {
+test('--apply installs the product, config, template, base and book tools', () => {
   const vault = makeVault(tmp());
   try {
     const obsidian = only(snapshot(vault), '.obsidian');
@@ -104,12 +104,20 @@ test('--apply installs the product, config, template, base and statistics note',
       localized('Import.de.md'),
     );
     assert.match(result.stdout, /open Books\/Import\.md and choose the CSV file/);
+    assert.deepEqual(
+      fs.readFileSync(path.join(vault, 'Books', 'Export.md')),
+      localized('Export.de.md'),
+    );
+    assert.match(result.stdout, /open Books\/Export\.md and check the CSV preview/);
     for (const file of [
       'storygraph.js',
       'goodreads.js',
       'import/view.js',
       'import/engine.js',
       'import/view.css',
+      'export-storygraph/engine.js',
+      'export-storygraph/view.js',
+      'export-storygraph/view.css',
     ]) {
       assert.ok(fs.existsSync(path.join(vault, 'Colophon', file)), file);
     }
@@ -265,6 +273,7 @@ test('--skip-* leave the matching files out and the checklist follows', () => {
       '--skip-base',
       '--skip-statistics',
       '--skip-import',
+      '--skip-export',
     );
     assert.equal(result.status, 0, result.stderr);
     assert.ok(fs.existsSync(path.join(vault, 'Colophon', 'lib.js')));
@@ -272,7 +281,8 @@ test('--skip-* leave the matching files out and the checklist follows', () => {
     assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Library.base')));
     assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Statistics.md')));
     assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Import.md')));
-    assert.doesNotMatch(result.stdout, /Templates"|Import\.md/);
+    assert.ok(!fs.existsSync(path.join(vault, 'Books', 'Export.md')));
+    assert.doesNotMatch(result.stdout, /Templates"|Import\.md|Export\.md/);
   } finally {
     cleanup(vault);
   }

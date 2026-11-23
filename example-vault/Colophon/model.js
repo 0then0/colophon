@@ -267,6 +267,21 @@ const catalog = (settings, locale, lookup) => {
   };
 };
 
+const isPageNumber = (value) => Number.isSafeInteger(value) && value > 0;
+
+// An omitted position is valid. Only a positive whole page count sets an upper bound.
+const readingPageError = (position, pages) => {
+  if (position == null) return null;
+  if (!isPageNumber(position)) return 'integer';
+  if (isPageNumber(pages) && position > pages) return 'pastEnd';
+  return null;
+};
+
+// Read again can start on the same date, so both Properties identify the read being edited.
+const sameReading = (previous, current) =>
+  (previous.started ?? null) === (current.started ?? null) &&
+  (Number(previous.reread_count) || 0) === (Number(current.reread_count) || 0);
+
 // ---- Dates ---------------------------------------------------------------------------------
 
 // Accepts a Luxon DateTime (Dataview), a Date, or a "YYYY-MM-DD" string.
@@ -334,15 +349,41 @@ const readingHistorySection = (lines) => {
   return { heading, listLines };
 };
 
+const HISTORY_ENTRY =
+  /^- (\S+?)[ \t]*(?:\u2192|->|\u2014|\u2013|-)[ \t]*(\d{4}-\d{2}-\d{2}|\?)[ \t]*$/;
+
 // Keep unknown endpoints ("?") so callers can distinguish undated entries from confirmed dates.
 const parseReadingHistory = (text) => {
   const lines = text.split(/\r?\n/);
   const { listLines } = readingHistorySection(lines);
-  const entry = /^- (\S+?)[ \t]*(?:\u2192|->|\u2014|\u2013|-)[ \t]*(\d{4}-\d{2}-\d{2}|\?)[ \t]*$/;
   return listLines.flatMap((index) => {
-    const match = entry.exec(lines[index]);
+    const match = HISTORY_ENTRY.exec(lines[index]);
     return match ? [{ started: match[1], finished: match[2] }] : [];
   });
+};
+
+const archiveReading = (text, { started, finished, rating }, rereadCount) => {
+  const from = String(started || '?');
+  const to = String(finished || '?');
+  const line = `- ${from} \u2192 ${to}`;
+  const score = typeof rating === 'number' && rating > 0 ? `  - rating: ${rating}` : null;
+  const entry = score ? [line, score] : [line];
+  const newline = text.includes('\r\n') ? '\r\n' : '\n';
+  const lines = text.split(/\r?\n/);
+  const { heading, listLines } = readingHistorySection(lines);
+  if (heading < 0)
+    return text.trimEnd() + ['', '', HISTORY_HEADING, '', ...entry, ''].join(newline);
+
+  // A failed Properties write can leave the new range at the end of history but still uncounted.
+  const reads = listLines.filter((index) => HISTORY_ENTRY.test(lines[index]));
+  const last = reads.at(-1);
+  const dates = HISTORY_ENTRY.exec(lines[last] ?? '');
+  if (reads.length === rereadCount + 1 && dates?.[1] === from && dates[2] === to) {
+    if (score && !/^\s+- rating:/.test(lines[last + 1] ?? '')) lines.splice(last + 1, 0, score);
+  } else {
+    lines.splice((listLines.at(-1) ?? heading) + 1, 0, ...entry);
+  }
+  return lines.join(newline);
 };
 
 return {
@@ -356,8 +397,12 @@ return {
   problemMessage,
   labelOf,
   catalog,
+  isPageNumber,
+  readingPageError,
+  sameReading,
   toUtcDate,
   readingDays,
   readingHistorySection,
   parseReadingHistory,
+  archiveReading,
 };

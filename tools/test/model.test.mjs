@@ -212,6 +212,56 @@ test('toUtcDate accepts strings, dates and Luxon-like objects', () => {
   assert.equal(model.toUtcDate(null), null);
 });
 
+test('reading positions are optional and can be set without a page count', () => {
+  assert.equal(model.readingPageError(undefined, 352), null);
+  assert.equal(model.readingPageError(null, 352), null);
+  assert.equal(model.readingPageError(128, undefined), null);
+  assert.equal(model.readingPageError(128, 0), null);
+});
+
+test('reading positions must be positive whole numbers within the known page count', () => {
+  for (const position of [0, -1, 1.5, NaN, Infinity, '128', Number.MAX_SAFE_INTEGER + 1]) {
+    assert.equal(model.readingPageError(position, 352), 'integer');
+  }
+  assert.equal(model.readingPageError(128, 352), null);
+  assert.equal(model.readingPageError(352, 352), null);
+  assert.equal(model.readingPageError(353, 352), 'pastEnd');
+});
+
+test('a page draft does not belong to a new read, even on the same day', () => {
+  assert.equal(model.sameReading({}, { started: null, reread_count: 0 }), true);
+  const first = { started: '2026-11-23', reread_count: 0 };
+  assert.equal(model.sameReading(first, { ...first, current_page: 128, pages: 352 }), true);
+  assert.equal(model.sameReading(first, { ...first, started: '2026-11-24' }), false);
+  assert.equal(model.sameReading(first, { ...first, reread_count: 1 }), false);
+});
+
+test('history keeps readings with the same finish date and different starts', () => {
+  const before = '## Reading history\n\n- 2026-10-17 → 2026-11-23\n  - rating: 4\n';
+  const complete = { started: '2026-11-01', finished: '2026-11-23', rating: 4.5 };
+  const after = model.archiveReading(before, complete, 1);
+  assert.equal(after, before + '- 2026-11-01 → 2026-11-23\n  - rating: 4.5\n');
+  assert.deepEqual(model.parseReadingHistory(after), [
+    { started: '2026-10-17', finished: '2026-11-23' },
+    { started: '2026-11-01', finished: '2026-11-23' },
+  ]);
+});
+
+test('history keeps same-day rereads and reuses an entry left by a failed Properties write', () => {
+  const complete = { started: '2026-11-23', finished: '2026-11-23', rating: 5 };
+  const before = '---\r\ncurrent_page: 352\r\n---\r\n\r\nNotes\r\n';
+  const once = model.archiveReading(before, complete, 0);
+  assert.equal(model.archiveReading(once, complete, 0), once);
+  const twice = model.archiveReading(once, { ...complete, rating: 3 }, 1);
+  assert.equal(
+    twice,
+    before +
+      '\r\n## Reading history\r\n\r\n' +
+      '- 2026-11-23 → 2026-11-23\r\n  - rating: 5\r\n' +
+      '- 2026-11-23 → 2026-11-23\r\n  - rating: 3\r\n',
+  );
+});
+
 test('readingDays: signed whole days, null for missing or invalid dates', () => {
   assert.equal(model.readingDays('2026-02-20', '2026-03-15'), 23);
   assert.equal(model.readingDays('2026-03-15', '2026-03-15'), 0);

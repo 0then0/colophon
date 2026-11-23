@@ -68,6 +68,13 @@
   "meta.readingSoFar": "ここまでの期間",
   "meta.startedToday": "今日から",
   "edit.open": "プロパティを編集",
+  "position.label": "現在のページ",
+  "position.ofTotal": "{total}ページ中{page}ページ",
+  "position.change": "ページを設定",
+  "position.clear": "位置をクリア",
+  "position.invalid": "ページ番号は正の整数で入力してください。",
+  "position.pastEnd": "ページ番号が本の総ページ数（{total}）を超えています。",
+  "position.readChanged": "読書の状態が変わりました。現在のページを更新するには、ノートを開き直してください。",
   "series.labelIndexed": "{series}、{index}巻",
   "series.labelPrequel": "{series}、前日譚",
 

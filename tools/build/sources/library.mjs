@@ -42,6 +42,7 @@ export const library = (t, catalog) => {
       cover_image: 'if(note.cover, image(note.cover), "")',
       status_label: labelFormula('note.status', catalog.statuses),
       format_label: labelFormula('note.format', catalog.formats),
+      current_page: 'note.current_page',
       // Number 0 in a series is a prequel and is shown by name.
       series_number: `if(note.series_index == 0, "${t('base.prop.seriesPrequel')}", if(note.series_index, note.series_index.toString(), ""))`,
     },
@@ -56,6 +57,7 @@ export const library = (t, catalog) => {
       'note.started': { displayName: t('base.prop.started') },
       'note.finished': { displayName: t('base.prop.finished') },
       'note.pages': { displayName: t('base.prop.pages') },
+      'formula.current_page': { displayName: t('position.label') },
       'note.date_added': { displayName: t('base.prop.dateAdded') },
       'note.series': { displayName: t('base.prop.series') },
       'note.series_index': { displayName: t('base.prop.seriesIndex') },
@@ -100,7 +102,7 @@ export const library = (t, catalog) => {
       },
       table(t('base.view.reading'), {
         filters: kindFilter(catalog, 'in_progress'),
-        order: [...COLUMNS, 'formula.format_label', 'started', 'pages'],
+        order: [...COLUMNS, 'formula.current_page', 'pages', 'formula.format_label', 'started'],
         sort: [{ property: 'started', direction: 'DESC' }],
       }),
       table(t('base.view.planned'), {

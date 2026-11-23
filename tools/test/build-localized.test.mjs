@@ -35,6 +35,9 @@ test('--config generates a Library base from custom statuses, formats and catego
     const en = YAML.parse(fs.readFileSync(path.join(out, 'Library.en.base'), 'utf8'));
     const reading = en.views.find((v) => v.name === 'Reading');
     assert.deepEqual(reading.filters, { or: ['status == "in_progress"', 'status == "on_hold"'] });
+    assert.ok(reading.order.includes('formula.current_page'));
+    assert.equal(en.formulas.current_page, 'note.current_page');
+    assert.equal(en.properties['formula.current_page'].displayName, 'Current page');
     assert.deepEqual(en.views.find((v) => v.name === 'Finished').filters, {
       and: ['status == "finished"'],
     });

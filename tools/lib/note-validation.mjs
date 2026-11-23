@@ -58,6 +58,9 @@ export const validateBookNote = ({ data, text, catalog, coversFolder, coverExist
     if (data[key] != null && !positiveInt(data[key]))
       fail(`${key} must be a positive whole number`);
   }
+  const positionError = model.readingPageError(data.current_page, data.pages);
+  if (positionError === 'integer') fail('current_page must be a positive whole number');
+  if (positionError === 'pastEnd') fail('current_page must not exceed pages');
   // Number 0 in a series is a prequel.
   if (data.series_index != null && !(Number.isInteger(data.series_index) && data.series_index >= 0))
     fail('series_index must be a whole number from 0 (0 is a prequel)');

@@ -68,6 +68,13 @@
   "meta.readingSoFar": "Leyendo hasta ahora",
   "meta.startedToday": "Empezado hoy",
   "edit.open": "Editar propiedades",
+  "position.label": "Página actual",
+  "position.ofTotal": "{page} de {total}",
+  "position.change": "Indicar página",
+  "position.clear": "Borrar posición",
+  "position.invalid": "Introduce un número de página entero y positivo.",
+  "position.pastEnd": "El número de página supera el total del libro ({total}).",
+  "position.readChanged": "La lectura ha cambiado. Vuelve a abrir la nota para actualizar la página.",
   "series.labelIndexed": "{series}, libro {index}",
   "series.labelPrequel": "{series}, precuela",
 

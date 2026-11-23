@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Save or clear the current page of a book in progress. The book page validates the page number, and the Library's
+  Reading view shows the saved `current_page`. Use the status selector to finish a read. Read again clears the
+  position and keeps the completed read in the history.
+
 ## [0.7.0] - 2026-11-21
 
 ### Added

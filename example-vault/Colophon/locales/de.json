@@ -68,6 +68,13 @@
   "meta.readingSoFar": "Bisher gelesen",
   "meta.startedToday": "Heute begonnen",
   "edit.open": "Eigenschaften bearbeiten",
+  "position.label": "Aktuelle Seite",
+  "position.ofTotal": "{page} von {total}",
+  "position.change": "Seite festlegen",
+  "position.clear": "Leseposition löschen",
+  "position.invalid": "Gib eine positive ganze Seitenzahl ein.",
+  "position.pastEnd": "Die Seitennummer liegt über der Gesamtzahl der Seiten ({total}).",
+  "position.readChanged": "Der Lesevorgang hat sich geändert. Öffne die Notiz erneut, um die Seite zu ändern.",
   "series.labelIndexed": "{series}, Band {index}",
   "series.labelPrequel": "{series}, Prequel",
 

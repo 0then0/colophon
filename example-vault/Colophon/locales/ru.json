@@ -73,6 +73,13 @@
   "meta.readingSoFar": "Читаю уже",
   "meta.startedToday": "Начата сегодня",
   "edit.open": "Редактировать свойства",
+  "position.label": "Текущая страница",
+  "position.ofTotal": "{page} из {total}",
+  "position.change": "Указать страницу",
+  "position.clear": "Сбросить позицию",
+  "position.invalid": "Введите целый положительный номер страницы.",
+  "position.pastEnd": "Номер страницы превышает объём книги ({total} стр.).",
+  "position.readChanged": "Состояние чтения изменилось. Откройте заметку заново, чтобы обновить страницу.",
   "series.labelIndexed": "{series}, книга {index}",
   "series.labelPrequel": "{series}, приквел",
 

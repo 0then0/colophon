@@ -43,13 +43,14 @@ with the English interface.
 ## What it does
 
 - **Book page.** Cover, title, authors, series, format, category, dates and a rating in half-star steps. Status,
-  rating and queue position change in place, and a form edits every property. Everything is written back to the note's
-  Properties.
+  rating and queue position change in place. The book page and its edit form write to the note's Properties.
+- **Current page.** Use **Set page** on a book in progress to save where you left off, for example "128 of 352".
+  The saved page is also visible in the Library's **Reading** view. Use **Clear position** to remove it.
 - **Author and series panels.** Click an author or a series to see their other books in your library.
 - **Reading queue.** Mark a planned book with "Add to queue"; the queue is ordered and shows up in statistics and in the
   Library base.
-- **Read again.** Starts a new read, keeps the previous dates in a "Reading history" section and counts each read in
-  its own year in the statistics.
+- **Read again.** Starts a new read with an empty page position, keeps the previous dates in a "Reading history"
+  section and counts each read in its own year in the statistics.
 - **Reading time.** The book page shows how many days a read took, or how long a book has been in progress.
 - **Statistics.** Books and pages per year and month, average rating, formats, genres, series progress, most-read
   authors, reading time, rereads, a quote from your own notes, and suggestions for what to read next based on your
@@ -124,7 +125,7 @@ stored in the repository; JavaScript queries are already turned on in the vault'
 | --- | --- |
 | [docs/INSTALL.md](docs/INSTALL.md) | Installer options, installation by hand, updating, checking the download |
 | [docs/SETTINGS.md](docs/SETTINGS.md) | `Colophon/config.json`: language, folders, your own statuses, formats and categories |
-| [docs/NOTES.md](docs/NOTES.md) | Properties of a book note, reading history, reading time, the template, summaries |
+| [docs/NOTES.md](docs/NOTES.md) | Properties of a book note, current page, reading history, reading time, the template, summaries |
 | [docs/IMPORT.md](docs/IMPORT.md) | Importing from StoryGraph and Goodreads, exporting to StoryGraph, covers and the cover script |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Project layout, checks, adding a language, building a release |

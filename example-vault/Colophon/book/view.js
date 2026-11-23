@@ -14,8 +14,8 @@ const colophon = await new AsyncFunction('dv', 'root', await dv.app.vault.read(l
   libFile.parent.path,
 );
 const { app, t, label, number, date, state, paths } = colophon;
-const { list, coverFile, joinList, listParts, collator, HISTORY_HEADING, kindOf } = colophon;
-const { readingHistorySection } = colophon;
+const { list, coverFile, joinList, listParts, collator, kindOf } = colophon;
+const { isPageNumber, readingPageError, sameReading, archiveReading } = colophon;
 
 const page = dv.current();
 if (!page) return;
@@ -86,6 +86,7 @@ const rating = typeof page.rating === 'number' && page.rating > 0 ? page.rating 
 const ratingBox =
   rating !== null || kindOf(page.status) !== 'planned' ? row(t('meta.rating')) : null;
 const statusBox = page.status ? row(t('meta.status')) : null;
+const positionBox = kindOf(page.status) === 'in_progress' ? row(t('position.label')) : null;
 const seriesName = page.series ? String(page.series) : null;
 const seriesBox = seriesName ? row(t('meta.series')) : null;
 if (page.format) row(t('meta.format'), label('format', page.format));
@@ -262,8 +263,9 @@ if (openedPanel && openedPanel.path === page.file.path && panelButtons[openedPan
 // Edit form. Writes only the changed fields through processFrontMatter; YAML stays the source of truth.
 const noteFile = app.vault.getAbstractFileByPath(page.file.path);
 
-const setProps = (changes) =>
+const setProps = (changes, validate) =>
   app.fileManager.processFrontMatter(noteFile, (data) => {
+    validate?.(data);
     for (const [key, value] of Object.entries(changes)) {
       if (value === null) delete data[key];
       else data[key] = value;
@@ -272,6 +274,145 @@ const setProps = (changes) =>
 const currentProps = () => app.metadataCache.getFileCache(noteFile)?.frontmatter || {};
 const today = () => dv.date('today').toFormat('yyyy-MM-dd');
 const saveFailed = (err) => t('error.saveFailed', { message: err.message });
+
+if (positionBox) {
+  const props = currentProps();
+  let { current_page: position, pages } = props;
+  const drafts = (state.positionDrafts ??= new WeakMap());
+  const component = dv.component;
+  const summary = positionBox.createDiv({ cls: 'book-detail__position' });
+  const value = summary.createSpan();
+  const change = summary.createEl('button', {
+    cls: 'book-detail__edit',
+    text: t('position.change'),
+    attr: { type: 'button' },
+  });
+  const warning = positionBox.createDiv({ cls: 'book-detail__message' });
+  const pageProblem = (current, total) => {
+    const error = readingPageError(current, total);
+    if (error === 'integer') return t('position.invalid');
+    if (error === 'pastEnd') return t('position.pastEnd', { total });
+    return '';
+  };
+  const paint = () => {
+    if (position == null) value.setText(t('form.unspecified'));
+    else if (isPageNumber(position) && isPageNumber(pages)) {
+      value.setText(t('position.ofTotal', { page: position, total: pages }));
+    } else if (typeof position === 'number') value.setText(number(position));
+    else value.setText(typeof position === 'string' ? position : '');
+    warning.setText(pageProblem(position, pages));
+  };
+  paint();
+  isolate(positionBox);
+
+  const storePosition = async (next, read) => {
+    let problem;
+    let readingChanged;
+    let total;
+    try {
+      await setProps({ current_page: next }, (data) => {
+        // Check the read and page count from the same Properties write.
+        readingChanged = kindOf(data.status) !== 'in_progress' || !sameReading(read, data);
+        problem = readingChanged ? t('position.readChanged') : pageProblem(next, data.pages);
+        if (problem) throw new Error(problem);
+        total = data.pages;
+      });
+      return { position: next, pages: total };
+    } catch (err) {
+      return {
+        error: problem || saveFailed(err),
+        invalidPage: Boolean(problem) && !readingChanged,
+      };
+    }
+  };
+
+  const showPositionForm = (draft, focus) => {
+    drafts.set(component, draft);
+    change.hidden = true;
+    const form = positionBox.createEl('form', {
+      cls: 'book-detail__prompt book-detail__position-form',
+      attr: { novalidate: '' },
+    });
+    const input = form.createEl('input', {
+      attr: { type: 'number', min: '1', step: '1', 'aria-label': t('position.label') },
+    });
+    input.value = draft.value;
+    if (isPageNumber(pages)) input.max = String(pages);
+    const save = form.createEl('button', { text: t('form.save'), attr: { type: 'submit' } });
+    const clear =
+      position != null &&
+      form.createEl('button', { text: t('position.clear'), attr: { type: 'button' } });
+    const cancel = form.createEl('button', { text: t('form.cancel'), attr: { type: 'button' } });
+    const message = form.createDiv({ cls: 'book-detail__message', attr: { role: 'alert' } });
+    const close = () => {
+      drafts.delete(component);
+      form.remove();
+      change.hidden = false;
+      change.focus({ preventScroll: true });
+    };
+    const setBusy = (busy) => {
+      for (const control of form.elements) control.disabled = busy;
+    };
+    const finish = async (pending) => {
+      setBusy(true);
+      const result = await pending;
+      // A Dataview refresh can replace this form while the write is pending.
+      if (!form.isConnected) return;
+      draft.pending = null;
+      if (result.error) {
+        message.setText(result.error);
+        if (result.invalidPage) input.setAttr('aria-invalid', 'true');
+        setBusy(false);
+        input.focus({ preventScroll: true });
+        return;
+      }
+      ({ position, pages } = result);
+      paint();
+      close();
+    };
+    const update = (next) => {
+      if (draft.pending) return;
+      draft.pending = storePosition(next, draft.read);
+      void finish(draft.pending);
+    };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      update(input.valueAsNumber);
+    });
+    form.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || event.isComposing || save.disabled) return;
+      event.preventDefault();
+      close();
+    });
+    input.addEventListener('input', () => {
+      draft.value = input.value;
+      input.removeAttribute('aria-invalid');
+      message.setText('');
+    });
+    if (clear) clear.addEventListener('click', () => update(null));
+    cancel.addEventListener('click', close);
+    if (draft.pending) void finish(draft.pending);
+    else if (focus) input.focus({ preventScroll: true });
+  };
+  change.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const { started, reread_count } = props;
+    showPositionForm(
+      {
+        value: typeof position === 'number' ? String(position) : '',
+        read: { started, reread_count },
+      },
+      true,
+    );
+  });
+  // Keep in-progress edits across index refreshes of this block, scoped to its current read.
+  const draft = drafts.get(component);
+  if (draft && kindOf(props.status) === 'in_progress' && sameReading(draft.read, props)) {
+    showPositionForm(draft, document.activeElement === document.body);
+  } else drafts.delete(component);
+}
 
 // Queue: what to read next. The position is stored in the "queue" property.
 if (kindOf(page.status) === 'planned') {
@@ -320,44 +461,41 @@ if (kindOf(page.status) === 'finished') {
       .createEl('button', { text: t('common.no'), attr: { type: 'button' } })
       .addEventListener('click', () => ask.remove());
     yes.addEventListener('click', async () => {
-      yes.disabled = true;
       const fm = currentProps();
-      const line = `- ${fm.started || '?'} → ${fm.finished || '?'}`;
+      if (kindOf(fm.status) !== 'finished') return ask.remove();
+      yes.disabled = true;
+      button.disabled = true;
+      const rereadCount = Number(fm.reread_count) || 0;
+      let stopRefresh;
       try {
         // The history section is a data format, not interface text, so it is not translated.
-        const score =
-          typeof fm.rating === 'number' && fm.rating > 0 ? `  - rating: ${fm.rating}` : null;
-        await app.vault.process(noteFile, (text) => {
-          const newline = text.includes('\r\n') ? '\r\n' : '\n';
-          const lines = text.split(/\r?\n/);
-          const { heading, listLines } = readingHistorySection(lines);
-          if (heading < 0) {
-            return (
-              text.trimEnd() +
-              ['', '', HISTORY_HEADING, '', line, ...(score ? [score] : []), ''].join(newline)
-            );
+        await app.vault.process(noteFile, (text) => archiveReading(text, fm, rereadCount));
+        const status = colophon.keysOfKind('in_progress')[0];
+        // Dataview can coalesce the history and Properties writes into one import with stale
+        // Properties. Check the index once it reports an update after Obsidian has the new status.
+        const cache = app.metadataCache;
+        const refresh = cache.on('dataview:metadata-change', (action, file) => {
+          if (action !== 'update' || file !== noteFile || currentProps().status !== status) return;
+          stopRefresh();
+          if (dv.page(file.path)?.status !== status) {
+            void dv.index.reload(file).catch((err) => console.warn('[Colophon]', err));
           }
-          // This read may already be listed in the history: extend that line instead of duplicating it.
-          const known = fm.finished
-            ? listLines.find(
-                (i) => lines[i].startsWith('- ') && lines[i].includes(`→ ${fm.finished}`),
-              )
-            : undefined;
-          if (known !== undefined) {
-            if (score) lines.splice(known + 1, 0, score);
-          } else {
-            const end = (listLines.at(-1) ?? heading) + 1;
-            lines.splice(end, 0, line, ...(score ? [score] : []));
-          }
-          return lines.join(newline);
         });
+        const expiry = window.setTimeout(() => stopRefresh(), 10000);
+        stopRefresh = () => {
+          window.clearTimeout(expiry);
+          cache.offref(refresh);
+        };
         await setProps({
-          status: colophon.keysOfKind('in_progress')[0],
+          status,
           started: today(),
           finished: null,
-          reread_count: (Number(fm.reread_count) || 0) + 1,
+          current_page: null,
+          reread_count: rereadCount + 1,
         });
       } catch (err) {
+        stopRefresh?.();
+        button.disabled = false;
         yes.disabled = false;
         ask.setText(saveFailed(err));
       }

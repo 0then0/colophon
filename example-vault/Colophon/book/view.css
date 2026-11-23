@@ -380,6 +380,26 @@
   font-size: 0.95em;
 }
 
+.book-detail__position {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.book-detail__position .book-detail__edit[hidden] {
+  display: none;
+}
+
+.book-detail__position-form input {
+  width: 7em;
+  max-width: 100%;
+}
+
+.book-detail__position-form .book-detail__message {
+  flex-basis: 100%;
+}
+
 .book-detail__checks {
   display: flex;
   flex-wrap: wrap;

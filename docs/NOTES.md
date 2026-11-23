@@ -24,6 +24,7 @@ queue: 1 # optional; only for planned books, lower is read sooner
 snoozed_until: 2027-02-04 # optional; set by "Not now", the book is not suggested until that date
 rating: 4.5 # 0.5 to 5 in steps of 0.5; leave empty for no rating
 pages: 352
+current_page: 352 # optional; set on the book page during a read
 publication_year: 1854
 started: 2026-02-20
 finished: 2026-03-15
@@ -41,6 +42,17 @@ translated, so notes and queries keep working when you change the language. The 
 
 For StoryGraph edition matching, use `isbn` for ISBN-10 and `isbn13` for ISBN-13. Quote them in YAML to preserve
 leading zeros, for example `isbn: '0141439513'`. A full `date_added` is required for a book to be exported.
+
+## Current page
+
+In a book in progress, **Set page** saves a positive whole number in `current_page`. The book page shows "128 of 352"
+when `pages` is set and the current page alone when the total is unknown. The Library's **Reading** view shows the
+saved page next to the page count. An absent `current_page` means the position is unset. **Clear position** removes
+the property, and existing notes can use the feature as they are.
+
+If a manual edit to Properties puts `current_page` above `pages`, the book page shows a warning and lets you correct
+or clear the position. The note keeps its saved value until you change it. Set the book's status to **Finished** when
+you complete a read. **Read again** clears `current_page` for the new read and keeps the previous dates in the history.
 
 ## Reading history
 

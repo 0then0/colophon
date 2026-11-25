@@ -90,6 +90,14 @@
 
   "queue.add": "Ajouter à la file",
   "queue.remove": "Dans la file : n° {place}, retirer",
+  "queue.moveUp": "Remonter « {title} » d’une place",
+  "queue.moveDown": "Descendre « {title} » d’une place",
+  "queue.moveTop": "Placer « {title} » en tête de la file",
+  "queue.saving": "Enregistrement de l’ordre de la file…",
+  "queue.saved": "L’ordre de la file a été enregistré.",
+  "queue.changed": "La file a changé. La liste a été actualisée. Réessayez.",
+  "queue.saveFailed": "Impossible d’enregistrer l’ordre complet de la file. La liste affiche les positions enregistrées.",
+  "queue.refreshFailed": "Impossible de lire les positions actuelles de la file. Réessayez.",
 
   "reread.button": "Relire",
   "reread.confirm": "Commencer une nouvelle lecture ? Les dates précédentes seront conservées dans l’historique.",
@@ -137,7 +145,6 @@
   "stats.nothingReading": "Aucune lecture en cours",
   "stats.queue": "File d’attente",
   "stats.queueEmpty": "Vide. Ajoutez un livre avec le bouton de sa page",
-  "stats.queueMore": "et {count} de plus. La file complète se trouve dans la vue « {view} » de votre base Library",
   "stats.quoteSource": "{title}, {authors}",
   "stats.titleByAuthors": "{title} · {authors}",
   "stats.next": "À lire ensuite",

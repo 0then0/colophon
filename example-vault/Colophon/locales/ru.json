@@ -102,6 +102,14 @@
 
   "queue.add": "Добавить в очередь",
   "queue.remove": "В очереди: №{place}, убрать",
+  "queue.moveUp": "Переместить «{title}» на позицию выше",
+  "queue.moveDown": "Переместить «{title}» на позицию ниже",
+  "queue.moveTop": "Переместить «{title}» в начало очереди",
+  "queue.saving": "Сохраняем порядок очереди…",
+  "queue.saved": "Порядок очереди сохранён.",
+  "queue.changed": "Очередь изменилась. Список обновлён. Повторите действие.",
+  "queue.saveFailed": "Не удалось сохранить порядок целиком. В списке показаны сохранённые позиции.",
+  "queue.refreshFailed": "Не удалось прочитать текущие позиции очереди. Повторите действие.",
 
   "reread.button": "Читать снова",
   "reread.confirm": "Начать новое чтение? Прошлые даты сохранятся в истории.",
@@ -149,7 +157,6 @@
   "stats.nothingReading": "Сейчас ничего не читаю",
   "stats.queue": "Очередь",
   "stats.queueEmpty": "Пусто. Добавить книгу можно кнопкой на её странице",
-  "stats.queueMore": "и ещё {count}. Вся очередь в представлении «{view}» базы Library",
   "stats.quoteSource": "{title}, {authors}",
   "stats.titleByAuthors": "{title} · {authors}",
   "stats.next": "Что читать дальше",

@@ -105,8 +105,12 @@ class Element {
   }
 
   setAttr() {}
+  setText(text) {
+    this.options.text = text;
+  }
   appendText() {}
   toggle() {}
+  toggleClass() {}
 
   empty() {
     this.children = [];
@@ -143,6 +147,7 @@ const statistics = async (bookNotes) => {
   const container = new Element('div');
   const dv = {
     container,
+    component: { register() {} },
     app: {
       metadataCache: {
         getFirstLinkpathDest: (file) => ({ path: file, parent: { path: 'Colophon' } }),

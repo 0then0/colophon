@@ -3,6 +3,7 @@ filters:
   and:
     - type == "book"
 formulas:
+  queue_path: file.path.split("").map(if(value == value.lower(), "a", "b") + value).join("")
   book: file.asLink(if(note.title, note.title, file.basename))
   cover_image: if(note.cover, image(note.cover), "")
   status_label: if(note.status == "planned", "Want to read", if(note.status == "in_progress", "Reading", if(note.status == "finished", "Finished", if(note.status == "abandoned", "Abandoned", note.status))))
@@ -73,6 +74,7 @@ views:
     name: Queue
     filters:
       and:
+        - queue.isType("number")
         - queue >= 1
     order:
       - queue
@@ -83,6 +85,12 @@ views:
       - pages
     sort:
       - property: queue
+        direction: ASC
+      - property: file.path
+        direction: ASC
+      - property: formula.queue_path
+        direction: ASC
+      - property: file.ctime
         direction: ASC
     rowHeight: tall
   - type: cards

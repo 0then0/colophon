@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Move queued books up, down, or to the top from Statistics. The Library's **Queue** view shows the same saved order.
+
 ## [0.8.0] - 2026-11-23
 
 ### Added

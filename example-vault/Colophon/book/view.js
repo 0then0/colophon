@@ -418,26 +418,33 @@ if (positionBox) {
 if (kindOf(page.status) === 'planned') {
   const button = links.createEl('button', { cls: 'book-detail__edit', attr: { type: 'button' } });
   let place = typeof page.queue === 'number' ? page.queue : null;
+  let queueError;
   const paint = () => button.setText(place ? t('queue.remove', { place }) : t('queue.add'));
   paint();
   isolate(button);
   button.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    queueError?.remove();
     if (place) {
       place = null;
       paint();
       await setProps({ queue: null });
       return;
     }
-    const taken = dv
-      .pages()
-      .where((p) => p.type === 'book' && typeof p.queue === 'number')
-      .array()
-      .map((p) => p.queue);
-    place = Math.max(0, ...taken) + 1;
-    paint();
-    await setProps({ queue: place });
+    button.disabled = true;
+    try {
+      place = await colophon.appendQueue(noteFile);
+      paint();
+    } catch (error) {
+      queueError = links.createDiv({
+        cls: 'book-detail__prompt',
+        text: saveFailed(error),
+        attr: { role: 'status' },
+      });
+    } finally {
+      button.disabled = false;
+    }
   });
 }
 

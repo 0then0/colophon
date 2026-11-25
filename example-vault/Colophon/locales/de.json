@@ -90,6 +90,14 @@
 
   "queue.add": "Zur Warteschlange hinzufügen",
   "queue.remove": "In der Warteschlange: Nr. {place}, entfernen",
+  "queue.moveUp": "„{title}“ nach oben verschieben",
+  "queue.moveDown": "„{title}“ nach unten verschieben",
+  "queue.moveTop": "„{title}“ an den Anfang verschieben",
+  "queue.saving": "Reihenfolge wird gespeichert…",
+  "queue.saved": "Reihenfolge gespeichert.",
+  "queue.changed": "Die Warteschlange hat sich geändert. Die Liste wurde aktualisiert. Versuche es erneut.",
+  "queue.saveFailed": "Die Reihenfolge konnte nicht vollständig gespeichert werden. Die Liste zeigt die gespeicherten Positionen.",
+  "queue.refreshFailed": "Die aktuellen Positionen konnten nicht gelesen werden. Versuche es erneut.",
 
   "reread.button": "Erneut lesen",
   "reread.confirm": "Neues Lesen beginnen? Die bisherigen Daten bleiben im Verlauf erhalten.",
@@ -137,7 +145,6 @@
   "stats.nothingReading": "Im Moment liest du nichts",
   "stats.queue": "Warteschlange",
   "stats.queueEmpty": "Leer. Füge ein Buch über die Schaltfläche auf seiner Seite hinzu",
-  "stats.queueMore": "und {count} weitere. Die ganze Warteschlange steht in der Ansicht „{view}“ deiner Library-Base",
   "stats.quoteSource": "{title}, {authors}",
   "stats.titleByAuthors": "{title} · {authors}",
   "stats.next": "Was als Nächstes lesen",

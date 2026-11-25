@@ -8,6 +8,93 @@ const en = loadLocale('en');
 const codes = (raw) => model.resolve(raw).problems.map((p) => `${p.code}:${p.path}`);
 const keys = (list) => list.map((e) => e.key);
 
+test('moving a book reuses the queue slots in the affected range', () => {
+  const entries = [
+    { path: 'Books/A.md', queue: 2 },
+    { path: 'Books/B.md', queue: 4 },
+    { path: 'Books/C.md', queue: 10 },
+    { path: 'Books/D.md', queue: 20 },
+  ];
+  assert.deepEqual(model.planQueueMove(entries, 2, 0), [
+    { entry: entries[2], queue: 2 },
+    { entry: entries[0], queue: 4 },
+    { entry: entries[1], queue: 10 },
+  ]);
+  assert.deepEqual(model.planQueueMove(entries, 0, 1), [
+    { entry: entries[1], queue: 2 },
+    { entry: entries[0], queue: 4 },
+  ]);
+});
+
+test('moving across tied positions makes enough room and leaves the next gap alone', () => {
+  const a = { path: 'Books/Volume 2.md', queue: 4 };
+  const b = { path: 'Books/Volume 10.md', queue: 4 };
+  const c = { path: 'Books/Volume 11.md', queue: 5 };
+  const d = { path: 'Books/Volume 12.md', queue: 12 };
+  const entries = [b, a, c, d].sort(model.compareQueue);
+  assert.deepEqual(entries, [a, b, c, d]);
+  assert.deepEqual(model.planQueueMove(entries, 1, 0), [{ entry: a, queue: 5 }]);
+});
+
+test('equivalent natural paths have a stable order even with the same creation time', () => {
+  const a = { path: 'Books/Volume 02.md', queue: 2, created: 100 };
+  const b = { path: 'Books/Volume 2.md', queue: 2, created: 100 };
+  assert.deepEqual([a, b].sort(model.compareQueue), [a, b]);
+  assert.deepEqual([b, a].sort(model.compareQueue), [a, b]);
+});
+
+test('appends wait for an active queue move and use current Properties despite stale metadata', async () => {
+  const files = ['Last', 'First append', 'Second append'].map((name) => ({
+    path: `Books/${name}.md`,
+    stat: { ctime: 1, mtime: 1, size: 1 },
+  }));
+  const [last, first, second] = files;
+  const disk = new Map(files.map((file) => [file, { type: 'book', status: 'planned' }]));
+  const cached = { type: 'book', queue: 5 };
+  disk.get(last).queue = cached.queue;
+  const app = {
+    vault: {
+      getMarkdownFiles: () => files,
+      adapter: {
+        read: (file) => read(path.join(COLOPHON, file)),
+        list: () => ({ files: ['locales/en.json'] }),
+      },
+    },
+    metadataCache: {
+      getFileCache: (file) => (file === last ? { frontmatter: cached } : null),
+    },
+    fileManager: {
+      processFrontMatter: async (file, change) => {
+        const properties = { ...disk.get(file) };
+        change(properties);
+        disk.set(file, properties);
+      },
+    },
+  };
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const load = new AsyncFunction('dv', 'root', 'window', read(path.join(COLOPHON, 'lib.js')));
+  const window = {};
+  const mover = await load({ app }, '', window);
+  const book = await load({ app }, '', window);
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const move = mover.writeQueue(async () => {
+    await gate;
+    disk.get(last).queue = 6;
+  });
+  const appends = [book.appendQueue(first), book.appendQueue(second)];
+  assert.equal(disk.get(first).queue, undefined);
+  release();
+  await move;
+  assert.deepEqual(await Promise.all(appends), [7, 8]);
+  assert.deepEqual(
+    files.map((file) => disk.get(file).queue),
+    [6, 7, 8],
+  );
+});
+
 test('the shipped config.json has no problems and keeps the built-in lists', () => {
   const settings = model.resolve(shipped);
   assert.deepEqual(settings.problems, []);

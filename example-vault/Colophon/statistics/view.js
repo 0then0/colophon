@@ -14,6 +14,8 @@ const colophon = await new AsyncFunction('dv', 'root', await dv.app.vault.read(l
 );
 const { app, t, label, number, date, period, state, paths, list, collator } = colophon;
 const { coverFile, joinList, monthNames, kindOf, isTopic } = colophon;
+const { queuePosition, planQueueMove, queueState, snapshotQueue, writeQueue, appendQueue } =
+  colophon;
 // The behaviour of a status comes from its kind, so custom statuses count like the built-in ones.
 const is = (p, kind) => kindOf(p.status) === kind;
 
@@ -186,28 +188,137 @@ for (const p of reading) {
   text.createSpan({ cls: 'rb-sub', text: joinList(authorsOf(p)) });
 }
 
-const QUEUE_SHOWN = 7;
-const queueBox = top.createDiv({ cls: 'rb-section' });
+const queueBox = top.createDiv({ cls: 'rb-section rb-queue' });
 queueBox.createDiv({ cls: 'rb-title', text: t('stats.queue') });
-const queued = books.filter((p) => typeof p.queue === 'number').sort((a, b) => a.queue - b.queue);
-if (!queued.length) queueBox.createDiv({ cls: 'rb-empty', text: t('stats.queueEmpty') });
-const queueList = queueBox.createEl('ol', { cls: 'rb-list' });
-queued.slice(0, QUEUE_SHOWN).forEach((p, i) => {
-  const li = queueList.createEl('li');
-  li.createEl('b', { text: number(i + 1) });
-  const b = bookButton(li, 'rb-link', p);
-  b.createSpan({ cls: 'rb-name', text: nameOf(p) });
-  b.createSpan({ cls: 'rb-sub', text: joinList(authorsOf(p)) });
+const queueMessage = queueBox.createDiv({
+  cls: 'rb-sub rb-queue-message',
+  attr: { role: 'status' },
 });
-if (queued.length > QUEUE_SHOWN) {
-  queueBox.createDiv({
-    cls: 'rb-empty',
-    text: t('stats.queueMore', {
-      count: queued.length - QUEUE_SHOWN,
-      view: t('base.view.queue'),
-    }),
+const queueEmpty = queueBox.createDiv({ cls: 'rb-empty', text: t('stats.queueEmpty') });
+const queueList = queueBox.createEl('ol', { cls: 'rb-list' });
+
+// Dataview keeps the container when it redraws. Share the lock across all open Statistics views.
+if (!queueState.views.has(dv.container)) {
+  queueState.views.set(dv.container, {});
+  dv.component.register(() => queueState.views.delete(dv.container));
+}
+const queueView = queueState.views.get(dv.container);
+let snapshot = await snapshotQueue();
+let controls = [];
+
+queueView.updateControls = () => {
+  for (const { button, unavailable } of controls) {
+    button.disabled = queueState.moving || unavailable;
+  }
+  const feedback = queueState.moving ? { key: 'queue.saving' } : queueView.feedback;
+  queueMessage.setText(feedback ? t(feedback.key) : '');
+  queueMessage.toggleClass('is-error', !queueState.moving && !!feedback?.error);
+};
+
+async function moveQueue(entry, from, to, action, button) {
+  if (queueState.moving) return;
+  queueState.moving = true;
+  queueView.focus = { path: entry.path, action, element: button };
+  queueState.views.forEach((view) => {
+    view.feedback = null;
+    if (view !== queueView) view.focus = null;
+    view.updateControls?.();
+  });
+  await writeQueue(async () => {
+    let current;
+    let feedback = { key: 'queue.changed' };
+    try {
+      current = await snapshotQueue(snapshot);
+      const entries = current.entries;
+      const unchanged =
+        entries.length === snapshot.entries.length &&
+        entries.every((book, i) => {
+          const displayed = snapshot.entries[i];
+          return book.path === displayed.path && book.queue === displayed.queue;
+        });
+      if (!unchanged) return;
+
+      try {
+        for (const { entry: book, queue } of planQueueMove(entries, from, to)) {
+          await app.fileManager.processFrontMatter(book.file, (properties) => {
+            if (book.file.path !== book.path || queuePosition(properties) !== book.queue) {
+              throw new Error('Queue Properties changed during the move.');
+            }
+            properties.queue = queue;
+          });
+        }
+        feedback = { key: 'queue.saved' };
+      } catch (error) {
+        console.error('[Colophon] Queue move failed:', error);
+        feedback = { key: 'queue.saveFailed', error: true };
+      }
+      current = await snapshotQueue(current);
+    } catch (error) {
+      console.error('[Colophon] Could not refresh the queue:', error);
+      current = await snapshotQueue();
+      feedback = { key: 'queue.refreshFailed', error: true };
+    } finally {
+      queueState.snapshot = current;
+      queueState.moving = false;
+      queueView.feedback = feedback;
+      queueState.views.forEach((view) => view.render?.(current));
+    }
   });
 }
+
+queueView.render = (current = snapshot) => {
+  snapshot = current;
+  const { entries } = snapshot;
+  const focus = queueView.focus;
+  const doc = queueList.ownerDocument;
+  const restoreFocus =
+    focus &&
+    !queueState.moving &&
+    (doc.activeElement === focus.element || doc.activeElement === doc.body);
+  let focusTarget;
+  queueList.empty();
+  queueEmpty.toggle(!entries.length);
+  controls = [];
+  entries.forEach((entry, i) => {
+    const page = dv.page(entry.path) ?? { file: { path: entry.path, name: entry.file.basename } };
+    const title = nameOf(page);
+    const li = queueList.createEl('li');
+    li.createEl('b', { text: number(i + 1) });
+    const link = bookButton(li, 'rb-link', page);
+    link.createSpan({ cls: 'rb-name', text: title });
+    link.createSpan({ cls: 'rb-sub', text: joinList(authorsOf(page)) });
+    const actions = li.createDiv({ cls: 'rb-queue-actions' });
+    if (restoreFocus && focus.path === entry.path) focusTarget = link;
+    for (const [action, icon, to] of [
+      ['queue.moveUp', '\u2191', i - 1],
+      ['queue.moveDown', '\u2193', i + 1],
+      ['queue.moveTop', '\u2912', 0],
+    ]) {
+      const name = t(action, { title });
+      const button = actions.createEl('button', {
+        text: icon,
+        attr: { type: 'button', 'aria-label': name, title: name },
+      });
+      const unavailable = to < 0 || to === i || to === entries.length;
+      controls.push({ button, unavailable });
+      if (restoreFocus && focus.path === entry.path && focus.action === action && !unavailable) {
+        focusTarget = button;
+      }
+      button.addEventListener('mousedown', (e) => e.stopPropagation());
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!unavailable) void moveQueue(entry, i, to, action, button);
+      });
+    }
+  });
+  queueView.updateControls();
+  if (focusTarget) {
+    focusTarget.focus();
+    focus.element = focusTarget;
+  } else if (!queueState.moving) queueView.focus = null;
+};
+queueView.render();
 
 // Quote of the day, taken from your own notes. The Obsidian cache is walked; only the chosen file is read.
 const quoteFiles = app.vault
@@ -452,7 +563,6 @@ const records = books.map((p) => ({
 const pageById = new Map(books.map((p) => [p.file.path, p]));
 const analysis = recommend.analyze(records, todayIso, isTopic);
 let { seriesPicks, candidates } = analysis;
-let queueEnd = Math.max(0, ...queued.map((p) => p.queue));
 
 const FILTER_LABELS = {
   all: t('rec.filter.all'),
@@ -509,19 +619,13 @@ const addActions = (li, book) => {
       run();
     });
   };
-  action(t('queue.add'), t('rec.queueTitle'), () => {
-    const place = queueEnd + 1;
-    setProps(
-      book,
-      (fm) => {
-        fm.queue = place;
-      },
-      () => {
-        queueEnd = place;
-        hide(book);
-      },
-      message,
-    );
+  action(t('queue.add'), t('rec.queueTitle'), async () => {
+    try {
+      await appendQueue(app.vault.getAbstractFileByPath(book.id));
+      hide(book);
+    } catch (error) {
+      message.setText(t('error.saveFailed', { message: error.message }));
+    }
   });
   action(t('rec.snooze'), t('rec.snoozeTitle', { count: SNOOZE_MONTHS }), () => {
     const until = dv.date('today').plus({ months: SNOOZE_MONTHS }).toFormat('yyyy-MM-dd');

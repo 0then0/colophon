@@ -90,6 +90,14 @@
 
   "queue.add": "Añadir a la cola",
   "queue.remove": "En la cola: n.º {place}, quitar",
+  "queue.moveUp": "Subir «{title}» una posición",
+  "queue.moveDown": "Bajar «{title}» una posición",
+  "queue.moveTop": "Mover «{title}» al principio de la cola",
+  "queue.saving": "Guardando el orden de la cola…",
+  "queue.saved": "Se ha guardado el orden de la cola.",
+  "queue.changed": "La cola ha cambiado. Se ha actualizado la lista. Vuelve a intentarlo.",
+  "queue.saveFailed": "No se pudo guardar el orden completo. La lista muestra las posiciones guardadas.",
+  "queue.refreshFailed": "No se pudieron leer las posiciones actuales de la cola. Vuelve a intentarlo.",
 
   "reread.button": "Leer de nuevo",
   "reread.confirm": "¿Empezar una nueva lectura? Las fechas anteriores se conservarán en el historial.",
@@ -137,7 +145,6 @@
   "stats.nothingReading": "No estás leyendo nada ahora mismo",
   "stats.queue": "Cola",
   "stats.queueEmpty": "Vacía. Añade un libro con el botón de su página",
-  "stats.queueMore": "y {count} más. La cola completa está en la vista «{view}» de tu base Library",
   "stats.quoteSource": "{title}, {authors}",
   "stats.titleByAuthors": "{title} · {authors}",
   "stats.next": "Qué leer a continuación",

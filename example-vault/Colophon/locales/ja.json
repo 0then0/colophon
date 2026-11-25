@@ -87,6 +87,14 @@
 
   "queue.add": "キューに追加",
   "queue.remove": "キュー {place}番目、削除",
+  "queue.moveUp": "「{title}」を1つ上へ移動",
+  "queue.moveDown": "「{title}」を1つ下へ移動",
+  "queue.moveTop": "「{title}」をキューの先頭へ移動",
+  "queue.saving": "キューの順番を保存中…",
+  "queue.saved": "キューの順番を保存しました。",
+  "queue.changed": "キューが変更されたため、一覧を更新しました。もう一度操作してください。",
+  "queue.saveFailed": "キューの順番をすべて保存できませんでした。一覧には保存済みの順番が表示されています。",
+  "queue.refreshFailed": "キューの現在の順番を読み込めませんでした。もう一度お試しください。",
 
   "reread.button": "もう一度読む",
   "reread.confirm": "新しい読書を始めますか？以前の日付は履歴に残ります。",
@@ -134,7 +142,6 @@
   "stats.nothingReading": "今は何も読んでいません",
   "stats.queue": "キュー",
   "stats.queueEmpty": "空です。本のページのボタンから追加できます",
-  "stats.queueMore": "ほか{count}冊。キュー全体は Library の「{view}」ビューにあります",
   "stats.quoteSource": "{title}、{authors}",
   "stats.titleByAuthors": "{title} · {authors}",
   "stats.next": "次に読む本",

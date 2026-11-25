@@ -90,6 +90,14 @@
 
   "queue.add": "Add to queue",
   "queue.remove": "In queue: #{place}, remove",
+  "queue.moveUp": "Move “{title}” up",
+  "queue.moveDown": "Move “{title}” down",
+  "queue.moveTop": "Move “{title}” to the top",
+  "queue.saving": "Saving queue order…",
+  "queue.saved": "Queue order saved.",
+  "queue.changed": "The queue changed. The list has been refreshed. Try again.",
+  "queue.saveFailed": "Could not save the full queue order. The list shows the saved positions.",
+  "queue.refreshFailed": "Could not read the current queue positions. Try again.",
 
   "reread.button": "Read again",
   "reread.confirm": "Start a new read? Previous dates will be kept in the history.",
@@ -137,7 +145,6 @@
   "stats.nothingReading": "Not reading anything right now",
   "stats.queue": "Queue",
   "stats.queueEmpty": "Empty. Add a book with the button on its page",
-  "stats.queueMore": "and {count} more. The whole queue is in the “{view}” view of your Library base",
   "stats.quoteSource": "{title}, {authors}",
   "stats.titleByAuthors": "{title} · {authors}",
   "stats.next": "What to read next",

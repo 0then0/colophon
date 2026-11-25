@@ -208,7 +208,76 @@ const injectStyle = async (id, relativePath) => {
 };
 
 // State that has to survive Dataview re-rendering the block (open panel, form draft, ...).
-window.colophonState = window.colophonState || {};
+const state = (window.colophonState ??= {});
+const queueState = (state.readingQueue ??= { moving: false, views: new Map() });
+const { queuePosition } = model;
+
+const readOnly = Symbol();
+const readQueuePosition = async (file) => {
+  let position = null;
+  try {
+    await app.fileManager.processFrontMatter(file, (properties) => {
+      position = queuePosition(properties);
+      // The callback reads current Properties. Throw before Obsidian serializes or writes YAML.
+      throw readOnly;
+    });
+  } catch (error) {
+    if (error !== readOnly) throw error;
+  }
+  return position;
+};
+
+const snapshotQueue = async (before) => {
+  const files = new Map();
+  const entries = [];
+  const queuedPaths = new Set(before?.entries.map((entry) => entry.path));
+  for (const file of app.vault.getMarkdownFiles()) {
+    const { path, stat } = file;
+    if (app.metadataCache.isUserIgnored?.(path)) continue;
+    const version = `${stat.mtime}:${stat.size}`;
+    files.set(path, version);
+    let queue = queuePosition(app.metadataCache.getFileCache(file)?.frontmatter);
+    // The cache can lag. Check queued notes and any new or changed file that could enter the queue.
+    if (before && (queue !== null || queuedPaths.has(path) || before.files.get(path) !== version)) {
+      queue = await readQueuePosition(file);
+    }
+    if (queue !== null) entries.push({ path, file, queue, created: stat.ctime });
+  }
+  return { files, entries: entries.sort(model.compareQueue) };
+};
+
+// An append must read the tail after any move ahead of it has finished writing.
+const writeQueue = (write) => {
+  const pending = (queueState.pending ?? Promise.resolve()).then(write);
+  queueState.pending = pending.catch(() => {});
+  return pending;
+};
+
+const appendQueue = (file) =>
+  writeQueue(async () => {
+    const snapshot = await snapshotQueue(queueState.snapshot ?? (await snapshotQueue()));
+    queueState.snapshot = snapshot;
+    // The new entry may reach the metadata cache after the next operation starts.
+    snapshot.files.delete(file.path);
+    let place = (snapshot.entries.at(-1)?.queue ?? 0) + 1;
+    try {
+      await app.fileManager.processFrontMatter(file, (properties) => {
+        const existing = queuePosition(properties);
+        if (properties.type !== 'book' || catalog.kindOf(properties.status) !== 'planned') {
+          place = null;
+          throw readOnly;
+        }
+        if (existing !== null) {
+          place = existing;
+          throw readOnly;
+        }
+        properties.queue = place;
+      });
+    } catch (error) {
+      if (error !== readOnly) throw error;
+    }
+    return place;
+  });
 
 return {
   app,
@@ -232,7 +301,7 @@ return {
   readingHistorySection,
   linkToLibraryNote,
   injectStyle,
-  state: window.colophonState,
+  state,
   catalog,
   statuses: catalog.statuses,
   formats: catalog.formats,
@@ -245,6 +314,12 @@ return {
   readingPageError: model.readingPageError,
   sameReading: model.sameReading,
   archiveReading: model.archiveReading,
+  queuePosition,
+  queueState,
+  snapshotQueue,
+  writeQueue,
+  appendQueue,
+  planQueueMove: model.planQueueMove,
   readingDays,
   loadRecommend,
   loadImport,

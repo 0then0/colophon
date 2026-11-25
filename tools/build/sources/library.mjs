@@ -38,6 +38,8 @@ export const library = (t, catalog) => {
   return {
     filters: { and: ['type == "book"'] },
     formulas: {
+      // Match queuePathKey in model.js for paths equivalent under the native natural sort.
+      queue_path: 'file.path.split("").map(if(value == value.lower(), "a", "b") + value).join("")',
       book: 'file.asLink(if(note.title, note.title, file.basename))',
       cover_image: 'if(note.cover, image(note.cover), "")',
       status_label: labelFormula('note.status', catalog.statuses),
@@ -84,9 +86,14 @@ export const library = (t, catalog) => {
         },
       },
       table(t('base.view.queue'), {
-        filters: { and: ['queue >= 1'] },
+        filters: { and: ['queue.isType("number")', 'queue >= 1'] },
         order: ['queue', ...COLUMNS.slice(0, 2), 'author', 'formula.format_label', 'pages'],
-        sort: [{ property: 'queue', direction: 'ASC' }],
+        sort: [
+          { property: 'queue', direction: 'ASC' },
+          { property: 'file.path', direction: 'ASC' },
+          { property: 'formula.queue_path', direction: 'ASC' },
+          { property: 'file.ctime', direction: 'ASC' },
+        ],
       }),
       {
         type: 'cards',

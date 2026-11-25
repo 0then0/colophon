@@ -90,6 +90,14 @@
 
   "queue.add": "Adicionar à fila",
   "queue.remove": "Na fila: nº {place}, remover",
+  "queue.moveUp": "Subir “{title}” uma posição",
+  "queue.moveDown": "Descer “{title}” uma posição",
+  "queue.moveTop": "Mover “{title}” para o início da fila",
+  "queue.saving": "Salvando a ordem da fila…",
+  "queue.saved": "Ordem da fila salva.",
+  "queue.changed": "A fila mudou. A lista foi atualizada. Tente novamente.",
+  "queue.saveFailed": "Não foi possível salvar toda a ordem da fila. A lista mostra as posições salvas.",
+  "queue.refreshFailed": "Não foi possível ler as posições atuais da fila. Tente novamente.",
 
   "reread.button": "Ler novamente",
   "reread.confirm": "Começar uma nova leitura? As datas anteriores serão mantidas no histórico.",
@@ -137,7 +145,6 @@
   "stats.nothingReading": "Você não está lendo nada no momento",
   "stats.queue": "Fila",
   "stats.queueEmpty": "Vazia. Adicione um livro com o botão da página dele",
-  "stats.queueMore": "e mais {count}. A fila completa está na visualização “{view}” da sua base Library",
   "stats.quoteSource": "{title}, {authors}",
   "stats.titleByAuthors": "{title} · {authors}",
   "stats.next": "O que ler a seguir",

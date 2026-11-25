@@ -47,8 +47,9 @@ with the English interface.
 - **Current page.** Use **Set page** on a book in progress to save where you left off, for example "128 of 352".
   The saved page is also visible in the Library's **Reading** view. Use **Clear position** to remove it.
 - **Author and series panels.** Click an author or a series to see their other books in your library.
-- **Reading queue.** Mark a planned book with "Add to queue"; the queue is ordered and shows up in statistics and in the
-  Library base.
+- **Reading queue.** Use **Add to queue** on a planned book to put it at the end. In Statistics, use **Move up**,
+  **Move down**, or **Move to top** beside any queued book. Statistics and the Library's **Queue** view use the saved
+  `queue` property. At the same position, books are sorted by file path, then by file creation time.
 - **Read again.** Starts a new read with an empty page position, keeps the previous dates in a "Reading history"
   section and counts each read in its own year in the statistics.
 - **Reading time.** The book page shows how many days a read took, or how long a book has been in progress.

@@ -386,6 +386,46 @@ const archiveReading = (text, { started, finished, rating }, rereadCount) => {
   return lines.join(newline);
 };
 
+const queuePosition = (properties) =>
+  properties?.type === 'book' && Number.isFinite(properties.queue) && properties.queue >= 1
+    ? properties.queue
+    : null;
+
+// Match the Queue base. Separating characters distinguishes numeric runs such as 02 and 2.
+const queuePaths = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const queuePathKey = (path) =>
+  path
+    .split('')
+    .map((char) => (char === char.toLowerCase() ? 'a' : 'b') + char)
+    .join('');
+const compareQueue = (a, b) =>
+  a.queue - b.queue ||
+  queuePaths.compare(a.path, b.path) ||
+  queuePaths.compare(queuePathKey(a.path), queuePathKey(b.path)) ||
+  a.created - b.created;
+
+const planQueueMove = (entries, from, to) => {
+  const ordered = entries.slice();
+  ordered.splice(to, 0, ordered.splice(from, 1)[0]);
+  const first = Math.min(from, to);
+  const last = Math.max(from, to);
+  const changes = [];
+  let previous = entries[first - 1];
+  for (let i = first; i < ordered.length; i++) {
+    const entry = ordered[i];
+    // Keep the existing slots. If a tie puts two books out of order, make room on the right.
+    let queue = Math.max(entries[i].queue, previous?.queue ?? 1);
+    if (previous && compareQueue(previous, { ...entry, queue }) >= 0) {
+      queue = Math.floor(queue) + 1;
+      if (queue <= previous.queue) throw new RangeError('Queue position is too large.');
+    }
+    if (queue === entry.queue && i > last) break;
+    if (queue !== entry.queue) changes.push({ entry, queue });
+    previous = { ...entry, queue };
+  }
+  return changes;
+};
+
 return {
   KINDS,
   HISTORY_HEADING,
@@ -405,4 +445,7 @@ return {
   readingHistorySection,
   parseReadingHistory,
   archiveReading,
+  queuePosition,
+  compareQueue,
+  planQueueMove,
 };
